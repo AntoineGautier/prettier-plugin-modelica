@@ -46,8 +46,7 @@ package Types
   <a href=\"modelica://Modelica.Fluid.UsersGuide.ComponentDefinition.ValveCharacteristics\">
     Users Guide</a>.
 </p>
-</html>
-"));
+</html>"));
   type HeatExchangerConfiguration = enumeration(
     ParallelFlow "Parallel flow",
     CounterFlow "Counter flow",
@@ -106,8 +105,7 @@ HeatExchangerConfiguration</code> is fixed. However, if the capacity
     Buildings.Fluid.Types.HeatExchangerFlowRegime</a> can change to parallel
   flow if one of the two capacity flow rates reverts its direction.
 </p>
-</html>
-",
+</html>",
       revisions="<html>
 <ul>
   <li>
@@ -126,8 +124,7 @@ ConstantTemperaturePhaseChange</code>.
     First implementation.
   </li>
 </ul>
-</html>
-"));
+</html>"));
   type HeatExchangerFlowRegime = enumeration(
     ParallelFlow "Parallel flow",
     CounterFlow "Counter flow",
@@ -177,8 +174,7 @@ ConstantTemperaturePhaseChange</code>.
     <td>Constant temperature phase change in one stream</td>
   </tr>
 </table>
-</html>
-",
+</html>",
       revisions="<html>
 <ul>
   <li>
@@ -197,8 +193,7 @@ ConstantTemperaturePhaseChange</code>.
     First implementation.
   </li>
 </ul>
-</html>
-"));
+</html>"));
   type InputType = enumeration(
     Constant "Use parameter to set stage",
     Stages "Use integer input to select stage",
@@ -218,8 +213,7 @@ ConstantTemperaturePhaseChange</code>.
   </li>
   <li>a continuously variable set point.</li>
 </ol>
-</html>
-",
+</html>",
       revisions="<html>
 <ul>
   <li>
@@ -228,12 +222,10 @@ ConstantTemperaturePhaseChange</code>.
     First implementation.
   </li>
 </ul>
-</html>
-"));
+</html>"));
 annotation(preferredView="info",
   Documentation(
     info="<html>
 <p>This package contains type definitions.</p>
-</html>
-"));
+</html>"));
 end Types;

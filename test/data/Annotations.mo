@@ -148,8 +148,7 @@ annotation(__Dymola_Commands(
     alt=\"Latch.png\"
   />
 </p>
-</html>
-",
+</html>",
     revisions="<html>
 <ul>
   <li>
@@ -206,6 +205,5 @@ annotation(__Dymola_Commands(
     First implementation.
   </li>
 </ul>
-</html>
-"));
+</html>"));
 end Annotations;

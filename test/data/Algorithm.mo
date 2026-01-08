@@ -112,8 +112,7 @@ annotation(defaultComponentName="intTimTab",
   The table scope is repeated periodically with periodicity
   <code>period</code>.
 </p>
-</html>
-",
+</html>",
     revisions="<html>
 <ul>
   <li>
@@ -154,8 +153,7 @@ annotation(defaultComponentName="intTimTab",
     in CDL.
   </li>
 </ul>
-</html>
-"),
+</html>"),
   Icon(coordinateSystem(preserveAspectRatio=true,
     extent={{-100.0,-100.0},{100.0,100.0}}),
     graphics={Rectangle(extent={{-100,-100},{100,100}},

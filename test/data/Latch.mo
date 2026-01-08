@@ -86,8 +86,7 @@ u</code>.
     alt=\"Latch.png\"
   />
 </p>
-</html>
-",
+</html>",
     revisions="<html>
 <ul>
   <li>
@@ -140,6 +139,5 @@ u</code>.
     First implementation.
   </li>
 </ul>
-</html>
-"));
+</html>"));
 end Latch;

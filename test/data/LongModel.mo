@@ -1194,8 +1194,7 @@ dat.hp.perCooHp</code> for the heating mode and the cooling mode,
     for HVAC Systems. Atlanta, GA.
   </li>
 </ul>
-</html>
-",
+</html>",
     revisions="<html>
 <ul>
   <li>
@@ -1222,8 +1221,7 @@ dat.hp.perCooHp</code> for the heating mode and the cooling mode,
     First implementation.
   </li>
 </ul>
-</html>
-"),
+</html>"),
   Diagram(graphics={Polygon(points={{560,80},{560,44},{561,44},{561,80}},
     lineColor={0,0,0},
     visible=have_chiWat and not ctl.have_senDpChiWatRemWir),

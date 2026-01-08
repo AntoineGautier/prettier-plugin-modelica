@@ -46,8 +46,11 @@ export function postProcessHTMLFromPrettier(
   // 1. Remove Prettier's 2-space base indent from each line
   const trimmedIndent = trimBaseIndent(html);
 
+  // 2. Move closing </html> to end of previous line (keep it attached to quote)
+  const htmlFixed = attachClosingHtmlTag(trimmedIndent);
+
   // 3. Re-escape quotes
-  const reescaped = reescapeQuotes(trimmedIndent);
+  const reescaped = reescapeQuotes(htmlFixed);
 
   // 4. Restore preserved blocks
   const restoredPreserved = restorePreservedBlocks(reescaped, preservedBlocks);
@@ -55,6 +58,17 @@ export function postProcessHTMLFromPrettier(
   const final = formatAnchorTags(restoredPreserved);
 
   return final;
+}
+
+/**
+ * Move closing </html> tag to the end of the previous line.
+ * Prettier puts </html> on its own line, but in Modelica documentation strings
+ * we want it attached to the quote: </html>"
+ */
+function attachClosingHtmlTag(html: string): string {
+  // Match a newline followed by optional whitespace and </html> at the end
+  // Replace with just </html> (removing the newline and whitespace before it)
+  return html.replace(/\n\s*<\/html>\s*$/i, "\n</html>");
 }
 
 /**

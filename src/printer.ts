@@ -759,8 +759,43 @@ export const printModelica: Printer<ASTNode>["print"] = (
     case "stored_definitions":
       return [join(hardline, path.map(print, "children")), hardline];
 
-    case "stored_definition":
-      return join(hardline, path.map(print, "children"));
+    case "stored_definition": {
+      // stored_definition contains class_definition followed by semicolon
+      // Long class specifiers already end with "end ClassName;" so don't need the extra semicolon
+      // Short class specifiers need the semicolon appended
+      const parts: Doc[] = [];
+
+      // Check if the class_definition contains a short-form specifier (needs semicolon)
+      // vs long_class_specifier (already ends with "end ClassName;")
+      let needsSemicolon = false;
+      const classDefChild = node.children.find((c) => c.type === "class_definition");
+      if (classDefChild) {
+        // Short-form specifiers include: short_class_specifier, enumeration_class_specifier,
+        // derivative_class_specifier, extends_class_specifier
+        const hasShortSpecifier = classDefChild.children.some(
+          (cc) =>
+            cc.type === "short_class_specifier" ||
+            cc.type === "enumeration_class_specifier" ||
+            cc.type === "derivative_class_specifier" ||
+            cc.type === "extends_class_specifier",
+        );
+        needsSemicolon = hasShortSpecifier;
+      }
+
+      for (let i = 0; i < node.children.length; i++) {
+        if (parts.length > 0) {
+          parts.push(hardline);
+        }
+        parts.push(path.call(print, "children", i));
+      }
+
+      // Append semicolon only for short-form class specifiers
+      if (needsSemicolon) {
+        parts.push(";");
+      }
+
+      return parts;
+    }
 
     case "within_clause": {
       const parts: Doc[] = ["within"];

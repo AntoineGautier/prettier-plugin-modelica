@@ -1,0 +1,54 @@
+{
+  "name": "prettier-plugin-modelica",
+  "version": "0.1.0",
+  "description": "Prettier plugin for Modelica code formatting using tree-sitter",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "modelica-format": "dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "setup": "cd grammars/tree-sitter-modelica && npm i && npm run build",
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run clean && npm run build",
+    "format": "node dist/cli.js",
+    "parse": "tsx src/cli.ts",
+    "test": "npm run build && bash test/run-tests.sh",
+    "test:indentcheck": "npm run build && bash test/run-tests.sh --indent-check"
+  },
+  "keywords": [
+    "prettier",
+    "prettier-plugin",
+    "modelica",
+    "formatter",
+    "tree-sitter"
+  ],
+  "author": "",
+  "license": "MIT",
+  "peerDependencies": {
+    "prettier": "^3.0.0"
+  },
+  "dependencies": {
+    "tree-sitter": "^0.25.0",
+    "tree-sitter-modelica": "file:grammars/tree-sitter-modelica"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "prettier": "^3.4.2",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  }
+}

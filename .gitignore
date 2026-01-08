@@ -1,0 +1,5 @@
+build
+dist
+node_modules
+grammars/modelica
+grammars/*.wasm

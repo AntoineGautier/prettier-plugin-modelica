@@ -209,7 +209,7 @@ export async function formatHTMLStringWithPrettier(
     return final;
   } catch (error) {
     // If Prettier formatting fails, return original HTML
-    console.warn("Prettier HTML formatting failed:", error);
+    console.error("Prettier HTML formatting failed:", error);
     return html;
   }
 }

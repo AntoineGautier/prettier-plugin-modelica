@@ -6,7 +6,29 @@
 import type { AstPath, Doc, Printer } from "prettier";
 import { doc } from "prettier";
 import type { ASTNode } from "./parser.js";
-import { formatHTMLString, DEFAULT_PRESERVED_TAGS } from "./html-formatter.js";
+import {
+  DEFAULT_PRESERVED_TAGS,
+  formatHTMLString,
+} from "./html-formatter.js";
+
+// ===========================================
+// HTML Formatter Configuration
+// ===========================================
+
+/**
+ * Toggle between embed formatter (Prettier's HTML parser) and builtin formatter.
+ * - true: Use Prettier's HTML parser via embed (default, better formatting)
+ * - false: Use builtin html-formatter.ts (no embed, simpler but less capable)
+ */
+export let usePrettierHTMLFormatter = true;
+
+/**
+ * Set whether to use the embed HTML formatter or the builtin formatter.
+ * @param useEmbed - true for embed formatter, false for builtin
+ */
+export function setUsePrettierHTMLFormatter(useEmbed: boolean): void {
+  usePrettierHTMLFormatter = useEmbed;
+}
 
 const { builders } = doc;
 const {
@@ -683,18 +705,26 @@ export const printModelica: Printer<ASTNode>["print"] = (
       // Check if this is HTML documentation in an annotation
       const inAnnotation = isInsideAnnotation(path);
       if (inAnnotation && text.includes("<html>")) {
-        // Extract string content (remove quotes)
-        const match = text.match(/^"(.*)"$/s);
-        if (match) {
-          const htmlContent = match[1];
-          // Format HTML with line length limit, preserving <pre> and <code> content
-          const formatted = formatHTMLString(htmlContent, {
-            maxWidth: 80,
-            baseIndent: "",
-            removeEmptyLines: true,
-            preservedTags: DEFAULT_PRESERVED_TAGS,
-          });
-          return `"${formatted}"`;
+        if (usePrettierHTMLFormatter) {
+          // HTML formatting is handled by embedHTML - if we reach here with HTML content,
+          // it means the embed formatter failed and Prettier fell back to print.
+          // We should NOT silently use the builtin formatter as a fallback.
+          throw new Error(
+            "HTML formatting failed: embed formatter error (see above for details)",
+          );
+        } else {
+          // Use builtin formatter (no embed)
+          const match = text.match(/^"(.*)"$/s);
+          if (match) {
+            const htmlContent = match[1];
+            const formatted = formatHTMLString(htmlContent, {
+              maxWidth: 80,
+              baseIndent: "",
+              removeEmptyLines: true,
+              preservedTags: DEFAULT_PRESERVED_TAGS,
+            });
+            return `"${formatted}"`;
+          }
         }
       }
 
@@ -3107,6 +3137,11 @@ const reportedHTMLErrors = new Set<string>();
  * This allows HTML in Modelica annotations to be formatted using Prettier's built-in HTML parser
  */
 export function embedHTML(path: AstPath<ASTNode>, _options: any) {
+  // Skip embed when using builtin formatter
+  if (!usePrettierHTMLFormatter) {
+    return null;
+  }
+
   const node = path.getValue();
 
   // Only process STRING nodes that contain HTML in annotations

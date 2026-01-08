@@ -11,7 +11,12 @@ import type {
   SupportOption,
 } from "prettier";
 import { parse as parseModelica, ASTNode } from "./parser.js";
-import { printModelica, embedHTML } from "./printer.js";
+import {
+  printModelica,
+  embedHTML,
+  usePrettierHTMLFormatter,
+  setUsePrettierHTMLFormatter,
+} from "./printer.js";
 
 // Language definition
 const languages: SupportLanguage[] = [
@@ -68,4 +73,11 @@ const plugin: Plugin<ASTNode> = {
 };
 
 export default plugin;
-export { languages, parsers, printers, options };
+export {
+  languages,
+  parsers,
+  printers,
+  options,
+  usePrettierHTMLFormatter,
+  setUsePrettierHTMLFormatter,
+};

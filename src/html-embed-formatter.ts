@@ -93,11 +93,17 @@ function formatAnchorTags(html: string): string {
       insideAnchor = false;
     }
 
-    // Add newline before <a if there's content before it (not at start of line)
-    // Capture the indent and content before <a, then put <a on new line with same indent
+    // Add newline before <a if there's non-whitespace content before it
+    // Only add newline if there's actual content (not just whitespace) before <a
     processedLine = processedLine.replace(
-      /^(\s*)(.+?)(\s*)(<a\s)/g,
-      `$1$2\n${indent}$4`,
+      /^(\s*)(\S.*?)(\s*)(<a\s)/g,
+      (match, leadingIndent, content, _space, anchor) => {
+        // Only add newline if content is not empty after trimming
+        if (content.trim()) {
+          return `${leadingIndent}${content}\n${indent}${anchor}`;
+        }
+        return match;
+      },
     );
 
     result.push(processedLine);
@@ -123,8 +129,75 @@ function trimBaseIndent(html: string): string {
 }
 
 /**
+ * Generate a placeholder of exact same length as the match, preserving newlines.
+ * Uses __PSBL as the root marker, padded with underscores to match length.
+ * For short matches, may slightly exceed the match length to fit the marker.
+ * The prefix __PSBL{index}_ is always kept intact (never split by newlines).
+ */
+function generatePlaceholder(match: string, blockIndex: number): string {
+  const targetLength = match.length;
+  const indexStr = blockIndex.toString();
+  const prefix = `__PSBL${indexStr}_`;
+  const suffix = "__";
+  const minLength = prefix.length + suffix.length;
+
+  // Count newlines and their positions in the original match
+  const newlinePositions: number[] = [];
+  for (let i = 0; i < match.length; i++) {
+    if (match[i] === "\n") {
+      newlinePositions.push(i);
+    }
+  }
+
+  if (newlinePositions.length === 0) {
+    // No newlines - simple case
+    if (targetLength <= minLength) {
+      // Short match - allow slightly exceeding length
+      return prefix + suffix;
+    }
+    // Pad with underscores to match length
+    const padding = "_".repeat(targetLength - minLength);
+    return prefix + padding + suffix;
+  }
+
+  // Has newlines - preserve their positions but keep prefix/suffix intact
+  // Shift newlines that would fall within prefix or suffix
+  const safeNewlinePositions = newlinePositions.filter(
+    (pos) => pos >= prefix.length && pos < targetLength - suffix.length,
+  );
+
+  // Build the placeholder
+  const chars: string[] = [];
+
+  // Add prefix first
+  for (let i = 0; i < prefix.length && i < targetLength; i++) {
+    chars.push(prefix[i]);
+  }
+
+  // Add middle section with preserved newlines
+  const middleStart = prefix.length;
+  const middleEnd = targetLength - suffix.length;
+
+  for (let i = middleStart; i < middleEnd; i++) {
+    if (safeNewlinePositions.includes(i)) {
+      chars.push("\n");
+    } else {
+      chars.push("_");
+    }
+  }
+
+  // Add suffix
+  for (let i = 0; i < suffix.length; i++) {
+    chars.push(suffix[i]);
+  }
+
+  return chars.join("");
+}
+
+/**
  * Extract preserved blocks and replace with placeholders
  * Preserved blocks (like <pre>, <code>, <a>) won't be formatted by Prettier
+ * Placeholders maintain the same length and newline positions as the original
  */
 function extractPreservedBlocks(
   html: string,
@@ -138,7 +211,7 @@ function extractPreservedBlocks(
     // Match opening tag with any attributes, content, and closing tag
     const pattern = new RegExp(`<${tag}([^>]*)>(.*?)<\\/${tag}>`, "gis");
     processedHtml = processedHtml.replace(pattern, (match) => {
-      const placeholder = `__PRESERVED_BLOCK_${blockIndex}__`;
+      const placeholder = generatePlaceholder(match, blockIndex);
       preservedBlocks.push({ placeholder, content: match });
       blockIndex++;
       return placeholder;
@@ -150,6 +223,7 @@ function extractPreservedBlocks(
 
 /**
  * Restore preserved blocks by replacing placeholders with original content
+ * Uses regex to match placeholders that may have been reformatted (whitespace changes)
  */
 function restorePreservedBlocks(
   html: string,
@@ -157,7 +231,19 @@ function restorePreservedBlocks(
 ): string {
   let result = html;
   for (const block of preservedBlocks) {
-    result = result.replace(block.placeholder, block.content);
+    // Extract the index from the placeholder to build a flexible regex
+    // Placeholder format: __PSBL{index}_ followed by underscores and ending with __
+    const indexMatch = block.placeholder.match(/__PSBL(\d+)_/);
+    if (indexMatch) {
+      const index = indexMatch[1];
+      // Match __PSBL{index}_ followed by any underscores/whitespace, ending with __
+      // Allow whitespace (including newlines) to be interspersed
+      const pattern = new RegExp(`__PSBL${index}_[_\\s]*__`, "g");
+      result = result.replace(pattern, block.content);
+    } else {
+      // Fallback to exact match
+      result = result.replace(block.placeholder, block.content);
+    }
   }
   return result;
 }

@@ -955,8 +955,8 @@ annotation(defaultComponentName="pla",
   <a href=\"modelica://Buildings.Templates.Plants.HeatPumps.Validation.AirToWater\">
     Buildings.Templates.Plants.HeatPumps.Validation.AirToWater</a> and
   selecting \"Show Component\" from the context menu. The available CHW and HW
-  loads used in logic are rolling averages over a period of
-  <code>dtMea</code> of values sampled every <i>30</i>&nbsp;s.
+  loads used in logic are rolling averages over a period of <code>dtMea</code>
+  of values sampled every <i>30</i>&nbsp;s.
 </p>
 <p align=\"center\">
   <img
@@ -1150,7 +1150,8 @@ annotation(defaultComponentName="pla",
       <br />
       See the documentation of
       <a href=\"modelica://Buildings.Templates.Plants.Controls.HeatPumps.AirToWater\">
-        Buildings.Templates.Plants.Controls.HeatPumps.AirToWater</a> for more details.
+        Buildings.Templates.Plants.Controls.HeatPumps.AirToWater</a> for
+      more details.
       <br />
       An open loop controller is also available for validation purposes.
     </td>
@@ -1160,7 +1161,6 @@ annotation(defaultComponentName="pla",
 <p>
   The control sequence implemented in this template requires the external
   input points specified in the documentation of the controller
-  
   <a href=\"modelica://Buildings.Templates.Plants.HeatPumps.Components.Controls.AirToWater\">
     Buildings.Templates.Plants.HeatPumps.Components.Controls.AirToWater</a>.
 </p>
@@ -1168,19 +1168,18 @@ annotation(defaultComponentName="pla",
 <h4>Implementation details</h4>
 <p>
   The pressure drops of the heat pump CHW and HW heat exchangers are
-  calculated within the isolation valve component <code>valIso
-</code> based
-  on lumped flow coefficients for the sake of computational efficiency.
+  calculated within the isolation valve component <code>valIso</code> based on
+  lumped flow coefficients for the sake of computational efficiency.
 </p>
 <p>
   The template uses a heat pump model that interpolates capacity and power
   from manufacturer data along the CHW/HW temperature, the outdoor air
   temperature and the part load ratio. The heat pump performance data are
-  provided via the subrecords <code>dat.hp.perHeaHp</code> and <code>
-dat.hp.perCooHp</code>
-  for the heating mode and the cooling mode, respectively. For the required
-  format of the performance data files, please refer to the documentation of
-  the block
+  provided via the subrecords <code>dat.hp.perHeaHp</code> and
+  <code>
+dat.hp.perCooHp</code> for the heating mode and the cooling mode,
+  respectively. For the required format of the performance data files, please
+  refer to the documentation of the block
   <a href=\"modelica://Buildings.Fluid.HeatPumps.ModularReversible.RefrigerantCycle.BaseClasses.TableData2DLoadDep\">
     Buildings.Fluid.HeatPumps.ModularReversible.RefrigerantCycle.BaseClasses.TableData2DLoadDep</a>.
 </p>

@@ -44,6 +44,15 @@ block TimeTable
         end if;
       end for;
     end getIndex;
+  public
+    parameter Real timeScale(final unit="1") = 1
+      "Time scale of first table column. Set to 3600 if time in table is in hours";
+    parameter Real period(final quantity="Time", final unit="s", min=1E-6)
+      "Periodicity of table";
+  protected
+    final parameter Integer nout = size(table, 2) - 1
+      "Dimension of output vector";
+    final parameter Integer nT = size(table, 1) "Number of time stamps";
 initial equation
   t0 = Buildings.Utilities.Math.Functions.round(
     x=integer(time / period) * period,
@@ -85,11 +94,11 @@ annotation(defaultComponentName="intTimTab",
 </pre>
 <p>
   where the first column of <code>table</code> is time and the remaining
-  column(s) are the table values. The time column contains
-  <code>Real</code> values that are in units of seconds if
-  <code>timeScale = 1</code>. The parameter <code>timeScale</code> can be used to
-  scale the time values, for example, use <code>timeScale = 3600</code> if the values
-  in the first column are interpreted as hours.
+  column(s) are the table values. The time column contains <code>Real</code>
+  values that are in units of seconds if <code>timeScale = 1</code>. The
+  parameter <code>timeScale</code> can be used to scale the time values, for
+  example, use <code>timeScale = 3600</code> if the values in the first column
+  are interpreted as hours.
 </p>
 <p>
   The values in column two and higher must be of type <code>Integer</code>,
@@ -135,8 +144,8 @@ annotation(defaultComponentName="intTimTab",
     <br />
     Revised implementation to add <code>timeSpan</code> and to guard against
     rounding errors. Refactored to avoid non-needed event-triggering
-    functions. Removed parameter <code>offset</code> as I don't see a use
-    case that justifies this complexity.
+    functions. Removed parameter <code>offset</code> as I don't see a use case
+    that justifies this complexity.
   </li>
   <li>
     September 14, 2020, by Milica Grahovac:

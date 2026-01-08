@@ -94,16 +94,16 @@ package Types
   </tr>
 </table>
 <p>
-  Note that for a given heat exchanger, the <code>
-HeatExchangerConfiguration</code> is fixed.
-  However, if the capacity flow rates change, then the
+  Note that for a given heat exchanger, the
+  <code>
+HeatExchangerConfiguration</code> is fixed. However, if the capacity
+  flow rates change, then the
   <a href=\"modelica://Buildings.Fluid.Types.HeatExchangerFlowRegime\">
-    Buildings.Fluid.Types.HeatExchangerFlowRegime</a>
-  may change. For example, a counter flow heat exchanger has
-  <code>HeatExchangerConfiguration=CounterFlow
-</code>, but the
-<a href=\"modelica://Buildings.Fluid.Types.HeatExchangerFlowRegime\">
-  Buildings.Fluid.Types.HeatExchangerFlowRegime</a> can change to parallel
+    Buildings.Fluid.Types.HeatExchangerFlowRegime</a> may change. For
+  example, a counter flow heat exchanger has
+  <code>HeatExchangerConfiguration=CounterFlow</code>, but the
+  <a href=\"modelica://Buildings.Fluid.Types.HeatExchangerFlowRegime\">
+    Buildings.Fluid.Types.HeatExchangerFlowRegime</a> can change to parallel
   flow if one of the two capacity flow rates reverts its direction.
 </p>
 </html>

@@ -15,6 +15,10 @@ model ReplaceableComments
     annotation(Dialog(
       enable=typ == Buildings.Templates.Components.Types.HeatPump.WaterToWater),
       __ctrlFlow(enable=false));
+  /*
+   * Derived classes representing AWHP shall use:
+   * redeclare final package MediumSou = MediumAir
+   */
   replaceable package MediumAir = Buildings.Media.Air
     constrainedby Modelica.Media.Interfaces.PartialMedium
     "Air medium"

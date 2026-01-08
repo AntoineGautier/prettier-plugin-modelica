@@ -1,9 +1,9 @@
 within Buildings.Controls.OBC.CDL.Integers.Sources;
 block TimeTable
   "Table look-up with respect to time with constant segments"
-  parameter Real table[:, :]
+  inner parameter Real table[:, :]
     "Table matrix with time as a first table column (in seconds, unless timeScale is not 1) and Integers in all other columns";
-  parameter Real timeScale(final unit="1") = 1
+  outer parameter Real timeScale
     "Time scale of first table column. Set to 3600 if time in table is in hours";
   parameter Real period(final quantity="Time", final unit="s", min=1E-6)
     "Periodicity of table";

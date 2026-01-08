@@ -29,7 +29,7 @@ model Annotations
         enable=typDis ==
           Buildings.Templates.Plants.HeatPumps.Types.Distribution.Constant1Variable2));
   replaceable Buildings.Templates.AirHandlersFans.Components.OutdoorSection.SingleDamper secOut
-    constrainedby Buildings.Templates.AirHandlersFans.Components.Interfaces.PartialOutdoorSection (
+    constrainedby Buildings.Templates.AirHandlersFans.Components.Interfaces.PartialOutdoorSection(
       redeclare final package MediumAir=MediumAir,
       final energyDynamics=energyDynamics,
       final allowFlowReversal=allowFlowReversal,

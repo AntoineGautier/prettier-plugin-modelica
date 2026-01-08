@@ -95,6 +95,16 @@ const INCLUDED_ANONYMOUS_TOKENS = new Set([
   "initial",
   "der",
   "pure",
+  // Redeclaration keywords (children of component_redeclaration, class_redeclaration)
+  "redeclare",
+  "replaceable",
+  "final",
+  "each",
+  // Element prefix keywords (children of named_element)
+  "inner",
+  "outer",
+  // Constraining clause keyword
+  "constrainedby",
 ]);
 
 /**

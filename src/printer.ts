@@ -962,12 +962,7 @@ export const printModelica: Printer<ASTNode>["print"] = (
     // Elements
     // ===========================================
     case "named_element": {
-      // Extract prefixes (parameter, final, etc.) from node.text
       const parts: Doc[] = [];
-      const prefix = extractElementPrefix(node);
-      if (prefix) {
-        parts.push(prefix, " ");
-      }
 
       // Check if this named_element has a constraining_clause (for replaceable components)
       const hasConstrainingClause = node.children.some(
@@ -998,7 +993,18 @@ export const printModelica: Printer<ASTNode>["print"] = (
 
       for (let i = 0; i < node.children.length; i++) {
         const child = node.children[i];
-        if (child.type === "component_clause") {
+        // Handle prefix keywords (final, replaceable, inner, outer, etc.)
+        if (
+          child.type === "final" ||
+          child.type === "replaceable" ||
+          child.type === "redeclare" ||
+          child.type === "inner" ||
+          child.type === "outer"
+        ) {
+          if (parts.length > 0) parts.push(" ");
+          parts.push(child.text ?? "");
+        } else if (child.type === "component_clause") {
+          if (parts.length > 0) parts.push(" ");
           parts.push(path.call(print, "children", i));
           // Don't add semicolon here if there are more clauses to follow
           if (
@@ -1009,6 +1015,7 @@ export const printModelica: Printer<ASTNode>["print"] = (
             parts.push(";");
           }
         } else if (child.type === "class_definition") {
+          if (parts.length > 0) parts.push(" ");
           parts.push(path.call(print, "children", i));
         } else if (child.type === "constraining_clause") {
           // constraining_clause comes after component_clause for replaceable components
@@ -1066,8 +1073,19 @@ export const printModelica: Printer<ASTNode>["print"] = (
       return group(parts);
     }
 
-    case "constraining_clause":
-      return ["constrainedby ", ...printChildrenWithSpaces(path, print)];
+    case "constraining_clause": {
+      const parts: Doc[] = ["constrainedby "];
+      for (let i = 0; i < node.children.length; i++) {
+        const child = node.children[i];
+        if (child.type === "type_specifier") {
+          parts.push(path.call(print, "children", i));
+        } else if (child.type === "class_modification") {
+          parts.push(path.call(print, "children", i));
+        }
+        // Skip the 'constrainedby' keyword node itself - already added above
+      }
+      return group(parts);
+    }
 
     // ===========================================
     // Components
@@ -1475,33 +1493,49 @@ export const printModelica: Printer<ASTNode>["print"] = (
       return printChildrenWithSpaces(path, print);
 
     case "class_redeclaration": {
-      // Extract 'redeclare' and optionally 'final', 'each' from node.text
-      const prefix = extractRedeclarePrefix(node);
-      const parts: Doc[] = [prefix, " "];
+      const parts: Doc[] = [];
 
       for (let i = 0; i < node.children.length; i++) {
         const child = node.children[i];
         if (
+          child.type === "redeclare" ||
+          child.type === "each" ||
+          child.type === "final" ||
+          child.type === "replaceable"
+        ) {
+          if (parts.length > 0) parts.push(" ");
+          parts.push(child.text ?? "");
+        } else if (
           child.type === "short_class_definition" ||
           child.type === "class_definition"
         ) {
-          parts.push(path.call(print, "children", i));
+          parts.push(" ", path.call(print, "children", i));
         }
       }
       return parts;
     }
 
     case "component_redeclaration": {
-      const prefix = extractRedeclarePrefix(node);
-      const parts: Doc[] = [prefix, " "];
+      const parts: Doc[] = [];
 
       for (let i = 0; i < node.children.length; i++) {
         const child = node.children[i];
-        if (child.type === "component_clause") {
-          parts.push(path.call(print, "children", i));
+        if (
+          child.type === "redeclare" ||
+          child.type === "each" ||
+          child.type === "final" ||
+          child.type === "replaceable"
+        ) {
+          if (parts.length > 0) parts.push(" ");
+          parts.push(child.text ?? "");
+        } else if (child.type === "component_clause") {
+          parts.push(" ", path.call(print, "children", i));
+        } else if (child.type === "constraining_clause") {
+          // constraining_clause on new line with indent (like in named_element)
+          parts.push(indent([line, path.call(print, "children", i)]));
         }
       }
-      return parts;
+      return group(parts);
     }
 
     case "short_class_definition": {
@@ -2933,40 +2967,7 @@ function printChildrenWithSpaces(
   return parts;
 }
 
-/**
- * Extract prefix keywords (parameter, final, etc.) from element node text
- */
-function extractElementPrefix(node: ASTNode): string {
-  const text = node.text ?? "";
 
-  // Get the start position of the first child
-  const firstChild = node.children[0];
-  if (!firstChild) return "";
-
-  const startRow = node.range.start.row;
-  const startCol = node.range.start.column;
-  const childStartRow = firstChild.range.start.row;
-  const childStartCol = firstChild.range.start.column;
-
-  // If child starts at same position as node, no prefix
-  if (startRow === childStartRow && startCol === childStartCol) {
-    return "";
-  }
-
-  // Extract the prefix text from the node
-  const lines = text.split("\n");
-  let prefixText = "";
-
-  if (startRow === childStartRow) {
-    // Same line - extract from startCol to childStartCol
-    prefixText = lines[0].substring(0, childStartCol - startCol).trim();
-  } else {
-    // Different lines - take the first line up to newline
-    prefixText = lines[0].trim();
-  }
-
-  return prefixText;
-}
 
 /**
  * Extract prefix keywords (parameter, constant, final, etc.) from component_clause
@@ -3034,28 +3035,7 @@ function extractModificationPrefix(node: ASTNode): string {
   return "";
 }
 
-/**
- * Extract redeclare prefix (redeclare, final, each) from redeclaration node
- */
-function extractRedeclarePrefix(node: ASTNode): string {
-  const text = node.text ?? "";
-  const firstChild = node.children[0];
-  if (!firstChild) return "redeclare";
 
-  const startCol = node.range.start.column;
-  const childStartCol = firstChild.range.start.column;
-
-  if (
-    node.range.start.row === firstChild.range.start.row &&
-    childStartCol > startCol
-  ) {
-    const lines = text.split("\n");
-    const prefixText = lines[0].substring(0, childStartCol - startCol).trim();
-    if (prefixText) return prefixText;
-  }
-
-  return "redeclare";
-}
 
 
 

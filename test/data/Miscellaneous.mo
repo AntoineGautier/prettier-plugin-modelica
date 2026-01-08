@@ -1,5 +1,38 @@
 within;
 model Miscellaneous
+  extends Buildings.Fluid.HeatPumps.ModularReversible.BaseClasses.PartialReversibleRefrigerantMachine(
+    final use_busConOnl=true,
+    final use_COP=have_switchover,
+    final use_EER=true,
+    final use_rev=false,
+    final PEle_nominal=refCyc.refCycChiCoo.PEle_nominal,
+    dpEva_nominal=datCoo.dpEva_nominal * scaFacCoo ^ 2,
+    dpCon_nominal=datCoo.dpCon_nominal * scaFacCoo ^ 2,
+    safCtr(
+      redeclare Buildings.Fluid.Chillers.ModularReversible.Controls.Safety.OperationalEnvelope opeEnv),
+    redeclare replaceable Buildings.Fluid.HeatPumps.ModularReversible.Controls.Safety.Data.TableData2DLoadDep safCtrPar
+      constrainedby Buildings.Fluid.HeatPumps.ModularReversible.Controls.Safety.Data.Generic(
+        final use_maxCycRat=false,
+        final tabUppHea=[0, 0],
+        final tabLowCoo=datCoo.tabLowBou,
+        final use_TConOutCoo=datCoo.use_TConOutForOpeEnv,
+        final use_TEvaOutCoo=datCoo.use_TEvaOutForOpeEnv),
+    dTEva_nominal=abs(QCoo_flow_nominal) / cpEva / mEva_flow_nominal,
+    dTCon_nominal=(abs(QCoo_flow_nominal) + PEle_nominal) / cpCon /
+      mCon_flow_nominal,
+    GEvaIns=0,
+    GEvaOut=0,
+    CEva=0,
+    use_evaCap=false,
+    GConIns=0,
+    GConOut=0,
+    CCon=0,
+    use_conCap=false,
+    mEva_flow_nominal=datCoo.mEva_flow_nominal * scaFacCoo,
+    mCon_flow_nominal=datCoo.mCon_flow_nominal * scaFacCoo,
+    redeclare final Buildings.Fluid.Chillers.ModularReversible.BaseClasses.RefrigerantCycleHeatRecovery refCyc(
+      redeclare final model RefrigerantCycleChillerCooling=
+        RefrigerantCycleChillerCooling));
   final model RefrigerantCycleChillerCooling =
     Buildings.Fluid.Chillers.ModularReversible.RefrigerantCycle.TableData2DLoadDep(
       final useInChi=true,

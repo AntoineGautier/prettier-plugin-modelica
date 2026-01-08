@@ -17,6 +17,33 @@ function removeWhitespace(content: string): string {
   return content.replace(/\s+/g, "");
 }
 
+// Find the first differing position between two strings
+function findFirstDifference(
+  a: string,
+  b: string,
+): { position: number; before: string; diffA: string; diffB: string } | null {
+  const minLen = Math.min(a.length, b.length);
+  for (let i = 0; i < minLen; i++) {
+    if (a[i] !== b[i]) {
+      // Show context: 20 chars before, 20 chars of differing part
+      const start = Math.max(0, i - 20);
+      const before = a.substring(start, i);
+      const diffA = a.substring(i, Math.min(a.length, i + 20));
+      const diffB = b.substring(i, Math.min(b.length, i + 20));
+      return { position: i, before, diffA, diffB };
+    }
+  }
+  // Strings match up to minLen, but have different lengths
+  if (a.length !== b.length) {
+    const start = Math.max(0, minLen - 20);
+    const before = a.substring(start, minLen);
+    const diffA = a.substring(minLen, Math.min(a.length, minLen + 20));
+    const diffB = b.substring(minLen, Math.min(b.length, minLen + 20));
+    return { position: minLen, before, diffA, diffB };
+  }
+  return null;
+}
+
 // Centralized error logging for correctness failures
 function logCorrectnessError(
   sourceNoWS: string,
@@ -24,14 +51,8 @@ function logCorrectnessError(
   additionalMessage?: string,
 ): void {
   console.error("✗ Correctness check failed!");
-  console.error(
-    "Original and formatted content differ (ignoring whitespace).",
-  );
-  console.error(
-    "Original length (no whitespace):",
-    sourceNoWS.length,
-    "chars",
-  );
+  console.error("Original and formatted content differ (ignoring whitespace).");
+  console.error("Original length (no whitespace):", sourceNoWS.length, "chars");
   console.error(
     "Formatted length (no whitespace):",
     formattedNoWS.length,
@@ -42,6 +63,17 @@ function logCorrectnessError(
     Math.abs(formattedNoWS.length - sourceNoWS.length),
     "chars",
   );
+
+  // Show where the strings first differ
+  const diff = findFirstDifference(sourceNoWS, formattedNoWS);
+  if (diff) {
+    console.error("");
+    console.error("First difference at position:", diff.position);
+    console.error("  Context: ..." + JSON.stringify(diff.before).slice(1, -1));
+    console.error("  Original:  " + JSON.stringify(diff.diffA).slice(1, -1));
+    console.error("  Formatted: " + JSON.stringify(diff.diffB).slice(1, -1));
+  }
+
   if (additionalMessage) {
     console.error(additionalMessage);
   }

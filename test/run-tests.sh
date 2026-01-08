@@ -37,7 +37,7 @@ for file in "$TEST_DIR"/*.mo; do
     echo "Formatting: $filename"
 
     # Format inplace w/ correctness check
-    npx tsx src/cli.ts "$TEST_DIR/$filename" --write --check
+    npx tsx src/cli.ts "$TEST_DIR/$filename" --write --check --verbose
 
     # Check that no line has more than +2 spaces compared to previous non-empty line
     if [ "$INDENT_CHECK" = true ]; then

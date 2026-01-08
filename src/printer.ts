@@ -766,18 +766,18 @@ export const printModelica: Printer<ASTNode>["print"] = (
       const parts: Doc[] = [];
 
       // Check if the class_definition contains a short-form specifier (needs semicolon)
-      // vs long_class_specifier (already ends with "end ClassName;")
+      // vs long_class_specifier or extends_class_specifier (already ends with "end ClassName;")
       let needsSemicolon = false;
       const classDefChild = node.children.find((c) => c.type === "class_definition");
       if (classDefChild) {
         // Short-form specifiers include: short_class_specifier, enumeration_class_specifier,
-        // derivative_class_specifier, extends_class_specifier
+        // derivative_class_specifier
+        // Note: extends_class_specifier is NOT short-form - it has "end ClassName;" like long_class_specifier
         const hasShortSpecifier = classDefChild.children.some(
           (cc) =>
             cc.type === "short_class_specifier" ||
             cc.type === "enumeration_class_specifier" ||
-            cc.type === "derivative_class_specifier" ||
-            cc.type === "extends_class_specifier",
+            cc.type === "derivative_class_specifier",
         );
         needsSemicolon = hasShortSpecifier;
       }
@@ -931,8 +931,58 @@ export const printModelica: Printer<ASTNode>["print"] = (
     }
 
     case "derivative_class_specifier":
-    case "extends_class_specifier":
       return printChildrenWithSpaces(path, print);
+
+    case "extends_class_specifier": {
+      // Format: extends IDENT [description_string] [element_list] [algorithm_section] [annotation_clause] ; end IDENT ;
+      // Used for "redeclare function extends FunctionName ..."
+      // Note: Semicolons are filtered out during parsing (see INCLUDED_ANONYMOUS_TOKENS),
+      // so we need to add them manually:
+      // - Semicolon after annotation_clause (before end)
+      // - Semicolon after end IDENT (at the very end)
+      const parts: Doc[] = [];
+      let className = "";
+      let hasAnnotation = false;
+
+      for (let i = 0; i < node.children.length; i++) {
+        const child = node.children[i];
+        if (child.type === "extends") {
+          parts.push("extends ");
+        } else if (child.type === "IDENT" && !className) {
+          className = child.text ?? "";
+          parts.push(className);
+        } else if (child.type === "IDENT") {
+          // Second IDENT is at the end after 'end' keyword - skip it, we'll add it manually
+        } else if (child.type === "description_string") {
+          parts.push(indent([line, path.call(print, "children", i)]));
+        } else if (child.type === "element_list") {
+          parts.push(indent([line, path.call(print, "children", i)]));
+        } else if (child.type === "public_element_list") {
+          parts.push(indent([line, path.call(print, "children", i)]));
+        } else if (child.type === "protected_element_list") {
+          parts.push(indent([line, path.call(print, "children", i)]));
+        } else if (child.type === "algorithm_section") {
+          // Algorithm section should start on a new line (no indent at section level)
+          parts.push(hardline, path.call(print, "children", i));
+        } else if (child.type === "equation_section") {
+          // Equation section should start on a new line
+          parts.push(hardline, path.call(print, "children", i));
+        } else if (child.type === "annotation_clause") {
+          parts.push(hardline, path.call(print, "children", i));
+          hasAnnotation = true;
+        } else if (child.type === "end") {
+          // Skip - we'll add end manually
+        }
+      }
+
+      // Add semicolon after annotation if present
+      if (hasAnnotation) {
+        parts.push(";");
+      }
+
+      parts.push(hardline, "end ", className, ";");
+      return group(parts);
+    }
 
     case "enumeration_class_specifier": {
       // Format: IDENT = enumeration(enum_list) [description_string] [annotation_clause]
@@ -1025,9 +1075,10 @@ export const printModelica: Printer<ASTNode>["print"] = (
       );
 
       // Check if class_definition contains a short-form specifier (needs semicolon)
-      // vs long_class_specifier (already ends with "end ClassName;")
+      // vs long_class_specifier or extends_class_specifier (already ends with "end ClassName;")
       // Short-form specifiers include: short_class_specifier, enumeration_class_specifier,
-      // derivative_class_specifier, extends_class_specifier
+      // derivative_class_specifier
+      // Note: extends_class_specifier is NOT short-form - it has "end ClassName;" like long_class_specifier
       const hasShortClassDefinition = node.children.some(
         (c) =>
           c.type === "class_definition" &&
@@ -1035,8 +1086,7 @@ export const printModelica: Printer<ASTNode>["print"] = (
             (cc: any) =>
               cc.type === "short_class_specifier" ||
               cc.type === "enumeration_class_specifier" ||
-              cc.type === "derivative_class_specifier" ||
-              cc.type === "extends_class_specifier",
+              cc.type === "derivative_class_specifier",
           ),
       );
 
@@ -1110,7 +1160,9 @@ export const printModelica: Printer<ASTNode>["print"] = (
       const parts: Doc[] = ["extends "];
       for (let i = 0; i < node.children.length; i++) {
         const child = node.children[i];
-        if (child.type === "type_specifier") {
+        if (child.type === "extends") {
+          // Skip - we already added "extends " manually above
+        } else if (child.type === "type_specifier") {
           parts.push(path.call(print, "children", i));
         } else if (child.type === "class_modification") {
           parts.push(path.call(print, "children", i));
@@ -1729,6 +1781,8 @@ export const printModelica: Printer<ASTNode>["print"] = (
         const child = node.children[i];
         if (child.type === "IDENT") {
           parts.push(child.text ?? "");
+        } else if (child.type === "in") {
+          // Skip - we add "in" manually below
         } else if (
           child.type === "expression" ||
           child.type === "simple_expression"
@@ -2849,7 +2903,9 @@ export const printModelica: Printer<ASTNode>["print"] = (
 
       for (let i = 0; i < node.children.length; i++) {
         const child = node.children[i];
-        if (child.type === "for_indices") {
+        if (child.type === "for") {
+          // Skip - we add "for" manually with for_indices
+        } else if (child.type === "for_indices") {
           parts.push(" for ", path.call(print, "children", i));
         } else {
           parts.push(path.call(print, "children", i));
@@ -2990,6 +3046,25 @@ export const printModelica: Printer<ASTNode>["print"] = (
         }
         // Closing paren on same line as last element
         return group(["(", indent([softline, join([",", line], args), ")"])]);
+      }
+
+      // Check for iterator/comprehension syntax: sum(expr for i in range)
+      // Structure: function_call_args has expression, "for", for_indices as children
+      const hasForClause = node.children.some((c) => c.type === "for");
+      if (hasForClause) {
+        const parts: Doc[] = ["("];
+        for (let i = 0; i < node.children.length; i++) {
+          const child = node.children[i];
+          if (child.type === "expression" || child.type === "simple_expression") {
+            parts.push(path.call(print, "children", i));
+          } else if (child.type === "for") {
+            parts.push(" for ");
+          } else if (child.type === "for_indices") {
+            parts.push(path.call(print, "children", i));
+          }
+        }
+        parts.push(")");
+        return group(parts);
       }
 
       // Extract all arguments from both function_arguments and named_arguments children

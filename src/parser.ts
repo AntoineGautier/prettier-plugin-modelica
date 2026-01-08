@@ -109,6 +109,12 @@ const INCLUDED_ANONYMOUS_TOKENS = new Set([
   // Note: if/elseif/when/elsewhen excluded - they would break if_expression handling
   "else",
   "then",
+  // Class specifier keywords (children of extends_class_specifier)
+  "extends",
+  "end",
+  // Iterator/comprehension keywords (children of function_call_args for sum/product/etc.)
+  "for",
+  "in",
 ]);
 
 /**

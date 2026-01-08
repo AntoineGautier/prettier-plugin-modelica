@@ -1704,6 +1704,9 @@ export const printModelica: Printer<ASTNode>["print"] = (
           // Structure: "if " + condition on same line,
           // "then" either on same line (if fits) or new line (at if's level)
           parts.push(group(["if ", condExpr, line, "then"]));
+        } else if (child.type === "comment" || child.type === "BLOCK_COMMENT") {
+          // Comments can appear after 'then' keyword - preserve them
+          parts.push(" ", path.call(print, "children", i));
         } else if (
           child.type === "equation_list" ||
           child.type === "statement_list"
@@ -2039,9 +2042,67 @@ export const printModelica: Printer<ASTNode>["print"] = (
       return join(":", path.map(print, "children"));
 
     case "binary_expression": {
-      // All children: left operand, operator, right operand
-      if (node.children.length === 3) {
-        const operator = node.children[1].text ?? "";
+      // Binary expressions have: left operand, operator, right operand
+      // But comments can be interspersed, so we find children by type rather than index.
+      // Helper to find operator and operand indices in a binary_expression
+      const findBinaryParts = (
+        n: ASTNode,
+      ): {
+        leftIdx: number;
+        opIdx: number;
+        rightIdx: number;
+        operator: string;
+        commentIndices: number[];
+      } | null => {
+        if (!n.children || n.children.length < 3) return null;
+        const operatorTypes = new Set([
+          "and", "or", "+", "-", "*", "/", "^",
+          ".+", ".-", ".*", "./", ".^",
+          "==", "<>", "<", ">", "<=", ">=",
+        ]);
+        let opIdx = -1;
+        for (let i = 0; i < n.children.length; i++) {
+          const child = n.children[i];
+          if (operatorTypes.has(child.type)) {
+            opIdx = i;
+            break;
+          }
+        }
+        if (opIdx === -1) return null;
+        // Left operand: first non-comment child before operator
+        let leftIdx = -1;
+        const commentIndices: number[] = [];
+        for (let i = 0; i < opIdx; i++) {
+          const child = n.children[i];
+          if (child.type === "comment" || child.type === "BLOCK_COMMENT") {
+            commentIndices.push(i);
+          } else if (leftIdx === -1) {
+            leftIdx = i;
+          }
+        }
+        // Right operand: first non-comment child after operator
+        let rightIdx = -1;
+        for (let i = opIdx + 1; i < n.children.length; i++) {
+          const child = n.children[i];
+          if (child.type === "comment" || child.type === "BLOCK_COMMENT") {
+            commentIndices.push(i);
+          } else if (rightIdx === -1) {
+            rightIdx = i;
+          }
+        }
+        if (leftIdx === -1 || rightIdx === -1) return null;
+        return {
+          leftIdx,
+          opIdx,
+          rightIdx,
+          operator: n.children[opIdx].text ?? n.children[opIdx].type,
+          commentIndices,
+        };
+      };
+
+      const parts = findBinaryParts(node);
+      if (parts) {
+        const { leftIdx, rightIdx, operator, commentIndices } = parts;
 
         // Logical operators (and/or) - flatten SAME operator only
         // to avoid cascading indentation in conditions like:
@@ -2058,36 +2119,68 @@ export const printModelica: Printer<ASTNode>["print"] = (
         // flatten the same operator (and with and, or with or)
         if (operator === "and" || operator === "or") {
           // Flatten same operator only
-          const operands: Doc[] = [];
+          // Each operand can have trailing comments that appear before the next operator
+          const operands: { doc: Doc; trailingComments: Doc[] }[] = [];
           const ops: string[] = [];
 
           const flattenLogical = (p: AstPath<ASTNode>): void => {
             const n = p.getValue();
 
             // Check if this is a binary_expression with the SAME logical operator
-            if (n.type === "binary_expression" && n.children?.length === 3) {
-              const op = n.children[1].text ?? "";
-              if (op === operator) {
-                p.call(flattenLogical, "children", 0);
-                ops.push(op);
-                p.call(flattenLogical, "children", 2);
+            if (n.type === "binary_expression") {
+              const innerParts = findBinaryParts(n);
+              if (innerParts && innerParts.operator === operator) {
+                // Recurse into left operand
+                p.call(
+                  (leftPath) => flattenLogical(leftPath),
+                  "children",
+                  innerParts.leftIdx,
+                );
+                // Collect comments from this binary_expression and attach to last operand
+                if (innerParts.commentIndices.length > 0 && operands.length > 0) {
+                  const lastOp = operands[operands.length - 1];
+                  for (const ci of innerParts.commentIndices) {
+                    lastOp.trailingComments.push(p.call(print, "children", ci));
+                  }
+                }
+                ops.push(innerParts.operator);
+                // Recurse into right operand
+                p.call(
+                  (rightPath) => flattenLogical(rightPath),
+                  "children",
+                  innerParts.rightIdx,
+                );
                 return;
               }
             }
             // Also handle simple_expression wrapper
             if (n.type === "simple_expression" && n.children?.length === 1) {
               const child = n.children[0];
-              if (
-                child.type === "binary_expression" &&
-                child.children?.length === 3
-              ) {
-                const op = child.children[1].text ?? "";
-                if (op === operator) {
+              if (child.type === "binary_expression") {
+                const innerParts = findBinaryParts(child);
+                if (innerParts && innerParts.operator === operator) {
                   p.call(
                     (innerPath) => {
-                      innerPath.call(flattenLogical, "children", 0);
-                      ops.push(op);
-                      innerPath.call(flattenLogical, "children", 2);
+                      innerPath.call(
+                        (leftPath) => flattenLogical(leftPath),
+                        "children",
+                        innerParts.leftIdx,
+                      );
+                      // Collect comments and attach to last operand
+                      if (innerParts.commentIndices.length > 0 && operands.length > 0) {
+                        const lastOp = operands[operands.length - 1];
+                        for (const ci of innerParts.commentIndices) {
+                          lastOp.trailingComments.push(
+                            innerPath.call(print, "children", ci),
+                          );
+                        }
+                      }
+                      ops.push(innerParts.operator);
+                      innerPath.call(
+                        (rightPath) => flattenLogical(rightPath),
+                        "children",
+                        innerParts.rightIdx,
+                      );
                     },
                     "children",
                     0,
@@ -2097,14 +2190,24 @@ export const printModelica: Printer<ASTNode>["print"] = (
               }
             }
             // Base case - not same operator, print normally
-            operands.push(print(p));
+            operands.push({ doc: print(p), trailingComments: [] });
           };
 
           flattenLogical(path);
 
           if (ops.length === 0) {
-            return operands[0];
+            const op = operands[0];
+            if (op.trailingComments.length > 0) {
+              return [op.doc, hardline, join(hardline, op.trailingComments)];
+            }
+            return op.doc;
           }
+
+          // Helper to format an operand with its trailing comments
+          const formatOperand = (op: { doc: Doc; trailingComments: Doc[] }): Doc => {
+            if (op.trailingComments.length === 0) return op.doc;
+            return [op.doc, hardline, join(hardline, op.trailingComments)];
+          };
 
           // Build flat structure with all continuations sharing the same indent level.
           // All continuation lines after the first operand are wrapped in a single
@@ -2115,19 +2218,19 @@ export const printModelica: Printer<ASTNode>["print"] = (
           if (inContinuation) {
             // Already in continuation context - no additional indent
             // Each continuation uses group([line, ...]) to allow independent breaking
-            const parts: Doc[] = [operands[0]];
+            const resultParts: Doc[] = [formatOperand(operands[0])];
             for (let i = 0; i < ops.length; i++) {
-              parts.push(" ", ops[i], group([line, operands[i + 1]]));
+              resultParts.push(" ", ops[i], group([line, formatOperand(operands[i + 1])]));
             }
-            return group(parts);
+            return group(resultParts);
           } else {
             // Not in continuation context - wrap ALL continuations in shared indent block
             // This ensures all continuation lines align at the same indent level
             const continuationParts: Doc[] = [];
             for (let i = 0; i < ops.length; i++) {
-              continuationParts.push(line, ops[i], " ", operands[i + 1]);
+              continuationParts.push(line, ops[i], " ", formatOperand(operands[i + 1]));
             }
-            return group([operands[0], indent(continuationParts)]);
+            return group([formatOperand(operands[0]), indent(continuationParts)]);
           }
         }
 
@@ -2176,9 +2279,9 @@ export const printModelica: Printer<ASTNode>["print"] = (
 
             // Check if this is a binary_expression (directly or wrapped in simple_expression)
             const binaryNode = unwrapToBinary(n);
-            if (binaryNode && binaryNode.children?.length === 3) {
-              const op = binaryNode.children[1].text ?? "";
-              if (arithmeticOperators.includes(op)) {
+            if (binaryNode) {
+              const innerParts = findBinaryParts(binaryNode);
+              if (innerParts && arithmeticOperators.includes(innerParts.operator)) {
                 // Need to navigate to the actual binary_expression in the path
                 if (
                   n.type === "simple_expression" &&
@@ -2189,10 +2292,15 @@ export const printModelica: Printer<ASTNode>["print"] = (
                     (innerPath) => {
                       const innerNode = innerPath.getValue();
                       if (innerNode.type === "binary_expression") {
-                        // Now recurse into left and right children
-                        innerPath.call(flatten, "children", 0);
-                        ops.push(op);
-                        innerPath.call(flatten, "children", 2);
+                        const ip = findBinaryParts(innerNode);
+                        if (ip) {
+                          // Now recurse into left and right children
+                          innerPath.call(flatten, "children", ip.leftIdx);
+                          ops.push(ip.operator);
+                          innerPath.call(flatten, "children", ip.rightIdx);
+                        } else {
+                          flatten(innerPath);
+                        }
                       } else {
                         flatten(innerPath);
                       }
@@ -2203,9 +2311,9 @@ export const printModelica: Printer<ASTNode>["print"] = (
                   return;
                 } else if (n.type === "binary_expression") {
                   // Direct binary_expression
-                  p.call(flatten, "children", 0);
-                  ops.push(op);
-                  p.call(flatten, "children", 2);
+                  p.call(flatten, "children", innerParts.leftIdx);
+                  ops.push(innerParts.operator);
+                  p.call(flatten, "children", innerParts.rightIdx);
                   return;
                 }
               }
@@ -2316,21 +2424,53 @@ export const printModelica: Printer<ASTNode>["print"] = (
         // Use wrapContinuation to add indent when not already in continuation context
         const comparisonOperators = ["==", "<>", "<", ">", "<=", ">="];
         if (comparisonOperators.includes(operator)) {
+          // Include any comments in the output
+          const commentDocs: Doc[] = commentIndices.map((ci) =>
+            path.call(print, "children", ci),
+          );
+          const leftDoc = path.call(print, "children", leftIdx);
+          const rightDoc = path.call(print, "children", rightIdx);
+          if (commentDocs.length > 0) {
+            return group([
+              leftDoc,
+              hardline,
+              join(hardline, commentDocs),
+              " ",
+              operator,
+              wrapContinuation(rightDoc, path),
+            ]);
+          }
           return group([
-            path.call(print, "children", 0),
+            leftDoc,
             " ",
             operator,
-            wrapContinuation(path.call(print, "children", 2), path),
+            wrapContinuation(rightDoc, path),
           ]);
         }
 
         // Other short expressions: allow breaking with proper indentation
         // Use group with line so parent indent (e.g., from parenthesized_expression) can apply
+        // Include any comments in the output
+        const commentDocs: Doc[] = commentIndices.map((ci) =>
+          path.call(print, "children", ci),
+        );
+        const leftDoc = path.call(print, "children", leftIdx);
+        const rightDoc = path.call(print, "children", rightIdx);
+        if (commentDocs.length > 0) {
+          return group([
+            leftDoc,
+            hardline,
+            join(hardline, commentDocs),
+            " ",
+            operator,
+            group([line, rightDoc]),
+          ]);
+        }
         return group([
-          path.call(print, "children", 0),
+          leftDoc,
           " ",
           operator,
-          group([line, path.call(print, "children", 2)]),
+          group([line, rightDoc]),
         ]);
       }
 

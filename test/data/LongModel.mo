@@ -612,10 +612,11 @@ initial equation
     yPumChiWatPriSet = dat.ctl.yPumChiWatPriSet;
   end if;
   if is_dpBalYPumSetCal
+  // Comment 1
     and have_heaWat
     and typPumHeaWatPri ==
       Buildings.Templates.Plants.HeatPumps.Types.PumpsPrimary.Constant
-  then
+  then // Comment 2
     assert(
       dpBalHeaWatHp_nominal >= 0,
       "In " + getInstanceName() + ": " +
@@ -623,10 +624,13 @@ initial equation
         "indicating that the primary pump curve needs to be revised.");
   end if;
   if is_dpBalYPumSetCal
+  // Comment 3
     and have_chiWat
+    // Comment 6
+    // Comment 4
     and typPumHeaWatPri ==
       Buildings.Templates.Plants.HeatPumps.Types.PumpsPrimary.Constant
-  then
+  then // Comment 5
     assert(
       dpBalChiWatHp_nominal >= 0,
       "In " + getInstanceName() + ": " +

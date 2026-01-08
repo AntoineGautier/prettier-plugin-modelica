@@ -1,6 +1,8 @@
 # prettier-plugin-modelica
 
-A [Prettier](https://prettier.io/) plugin for formatting Modelica code using [tree-sitter](https://tree-sitter.github.io/tree-sitter/).
+A [Prettier](https://prettier.io/) plugin for formatting Modelica code.
+
+Uses the [tree-sitter-modelica](https://github.com/OpenModelica/tree-sitter-modelica) grammar for parsing, which generates an abstract syntax tree (AST) that Prettier then formats back into consistently styled source code.
 
 ## Installation
 
@@ -70,8 +72,17 @@ Add to your `.prettierrc`:
 }
 ```
 
-## How It Works
+## License
 
-1. **Parsing**: Uses `tree-sitter` CLI to parse Modelica source code into an S-expression AST
-2. **AST Conversion**: Converts the S-expression into a JavaScript AST structure
-3. **Printing**: Prettier's doc builders format the AST back into source code
+This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**.
+
+See the [LICENSE](LICENSE) file for the full license text and the [COPYRIGHT](COPYRIGHT) file for copyright and licensing details.
+
+### What This Means
+
+- ✅ You can freely use, modify, and distribute this software
+- ✅ The source code is fully open and available
+- ⚠️ If you modify and distribute this software, you must also distribute your modifications under AGPL v3
+- ⚠️ If you run a modified version on a server accessible to users, you must make the source code available to those users
+
+For more information about AGPL v3, see: https://www.gnu.org/licenses/agpl-3.0.html

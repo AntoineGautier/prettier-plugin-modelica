@@ -36,8 +36,8 @@
     "formatter",
     "tree-sitter"
   ],
-  "author": "",
-  "license": "MIT",
+  "author": "Antoine Gautier <agautier@solamen.fr> (https://github.com/AntoineGautier)",
+  "license": "AGPL-3.0",
   "peerDependencies": {
     "prettier": "^3.0.0"
   },

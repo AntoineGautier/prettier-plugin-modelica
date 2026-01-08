@@ -121,6 +121,17 @@ initial equation
     yPumChiWatPriSet = dat.ctl.yPumChiWatPriSet;
   end if;
 equation
+  if (uMod == 0) then // uMod == +1
+    xNor = fill(0, 5);
+  elseif (uMod == -1) then // uMod == +1
+    xNor = {1, TLoaEnt / per.coo.TRefLoa, TSouEnt / per.coo.TRefSou,
+      mLoa_flow / (per.coo.mLoa_flow * scaling_factor),
+      mSou_flow / (per.coo.mSou_flow * scaling_factor)};
+  else // uMod == +1
+    xNor = {1, TLoaEnt / per.hea.TRefLoa, TSouEnt / per.hea.TRefSou,
+      mLoa_flow / (per.hea.mLoa_flow * scaling_factor),
+      mSou_flow / (per.hea.mSou_flow * scaling_factor)};
+  end if;
   when {u, reset, reset, reset, reset, reset, reset, reset, reset, reset, reset,
     reset, reset, reset} then
     entryTime = time;

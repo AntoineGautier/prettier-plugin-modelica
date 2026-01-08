@@ -105,6 +105,10 @@ const INCLUDED_ANONYMOUS_TOKENS = new Set([
   "outer",
   // Constraining clause keyword
   "constrainedby",
+  // Control flow keywords (for comment attachment in equations/statements)
+  // Note: if/elseif/when/elsewhen excluded - they would break if_expression handling
+  "else",
+  "then",
 ]);
 
 /**

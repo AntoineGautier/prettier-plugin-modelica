@@ -638,6 +638,20 @@ function isCoordinateArray(node: ASTNode): boolean {
 }
 
 /**
+ * Check if a child node is a comment (line or block)
+ */
+function isComment(node: ASTNode): boolean {
+  return node.type === "comment" || node.type === "BLOCK_COMMENT";
+}
+
+/**
+ * Check if two nodes are on the same line
+ */
+function onSameLine(a: ASTNode, b: ASTNode): boolean {
+  return a.range.start.row === b.range.start.row;
+}
+
+/**
  * Get the name of a function application or element modification
  */
 function getAnnotationElementName(node: ASTNode): string | null {
@@ -1693,33 +1707,52 @@ export const printModelica: Printer<ASTNode>["print"] = (
     case "if_equation":
     case "if_statement": {
       const parts: Doc[] = [];
-      let statementListCount = 0;
 
       for (let i = 0; i < node.children.length; i++) {
         const child = node.children[i];
+
+        // Helper to check and consume trailing comment on same line
+        const maybeTrailingComment = (): Doc[] => {
+          if (i + 1 < node.children.length) {
+            const nextChild = node.children[i + 1];
+            if (isComment(nextChild) && onSameLine(child, nextChild)) {
+              i++; // Skip the comment in the main loop
+              return [" ", path.call(print, "children", i)];
+            }
+          }
+          return [];
+        };
+
         if (child.type === "expression") {
-          // Condition expression - inner constructs (binary_expression, etc.)
-          // handle their own indentation for continuations
-          const condExpr = path.call(print, "children", i);
+          // Condition expression with "if " prefix
           // Structure: "if " + condition on same line,
           // "then" either on same line (if fits) or new line (at if's level)
-          parts.push(group(["if ", condExpr, line, "then"]));
-        } else if (child.type === "comment" || child.type === "BLOCK_COMMENT") {
-          // Comments can appear after 'then' keyword - preserve them
+          const condExpr = path.call(print, "children", i);
+          // Look ahead for 'then' keyword to group with condition
+          if (
+            i + 1 < node.children.length &&
+            node.children[i + 1].type === "then"
+          ) {
+            i++; // consume the 'then' keyword
+            // Check for comment after 'then'
+            const thenComment = maybeTrailingComment();
+            parts.push(group(["if ", condExpr, line, "then", ...thenComment]));
+          } else {
+            parts.push(group(["if ", condExpr, line, "then"]));
+          }
+        } else if (child.type === "then") {
+          // 'then' already consumed with expression above, skip
+        } else if (child.type === "else") {
+          // "else" keyword with possible trailing comment
+          parts.push(hardline, "else", ...maybeTrailingComment());
+        } else if (isComment(child)) {
+          // Standalone comment (not consumed by keyword handling)
           parts.push(" ", path.call(print, "children", i));
         } else if (
           child.type === "equation_list" ||
           child.type === "statement_list"
         ) {
-          statementListCount++;
-          if (statementListCount === 1) {
-            // First statement_list is the then branch
-            parts.push(indent([line, path.call(print, "children", i)]));
-          } else {
-            // Second statement_list is the else branch (no elseif in between)
-            parts.push(hardline, "else");
-            parts.push(indent([line, path.call(print, "children", i)]));
-          }
+          parts.push(indent([line, path.call(print, "children", i)]));
         } else if (
           child.type === "else_if_equation_clause_list" ||
           child.type === "else_if_statement_clause_list"
@@ -1745,10 +1778,41 @@ export const printModelica: Printer<ASTNode>["print"] = (
 
       for (let i = 0; i < node.children.length; i++) {
         const child = node.children[i];
+
+        // Helper to check and consume trailing comment on same line
+        const maybeTrailingComment = (): Doc[] => {
+          if (i + 1 < node.children.length) {
+            const nextChild = node.children[i + 1];
+            if (isComment(nextChild) && onSameLine(child, nextChild)) {
+              i++; // Skip the comment in the main loop
+              return [" ", path.call(print, "children", i)];
+            }
+          }
+          return [];
+        };
+
         if (child.type === "expression") {
-          // Same pattern as if_statement for condition + then
+          // Condition expression with "elseif " prefix
           const condExpr = path.call(print, "children", i);
-          parts.push(group(["elseif ", indent(condExpr), line, "then"]));
+          // Look ahead for 'then' keyword to group with condition
+          if (
+            i + 1 < node.children.length &&
+            node.children[i + 1].type === "then"
+          ) {
+            i++; // consume the 'then' keyword
+            // Check for comment after 'then'
+            const thenComment = maybeTrailingComment();
+            parts.push(
+              group(["elseif ", indent(condExpr), line, "then", ...thenComment]),
+            );
+          } else {
+            parts.push(group(["elseif ", indent(condExpr), line, "then"]));
+          }
+        } else if (child.type === "then") {
+          // 'then' already consumed with expression above, skip
+        } else if (isComment(child)) {
+          // Standalone comment
+          parts.push(" ", path.call(print, "children", i));
         } else if (
           child.type === "equation_list" ||
           child.type === "statement_list"
@@ -1761,12 +1825,38 @@ export const printModelica: Printer<ASTNode>["print"] = (
 
     case "when_equation":
     case "when_statement": {
-      const parts: Doc[] = ["when "];
+      const parts: Doc[] = [];
+      let seenCondition = false;
 
       for (let i = 0; i < node.children.length; i++) {
         const child = node.children[i];
+
+        // Helper to check and consume trailing comment on same line
+        const maybeTrailingComment = (): Doc[] => {
+          if (i + 1 < node.children.length) {
+            const nextChild = node.children[i + 1];
+            if (isComment(nextChild) && onSameLine(child, nextChild)) {
+              i++; // Skip the comment in the main loop
+              return [" ", path.call(print, "children", i)];
+            }
+          }
+          return [];
+        };
+
         if (child.type === "expression") {
-          parts.push(path.call(print, "children", i), " then");
+          // Condition expression - prepend "when " for the first one
+          if (!seenCondition) {
+            parts.push("when ", path.call(print, "children", i));
+            seenCondition = true;
+          } else {
+            parts.push(path.call(print, "children", i));
+          }
+        } else if (child.type === "then") {
+          // "then" keyword with possible trailing comment
+          parts.push(" then", ...maybeTrailingComment());
+        } else if (isComment(child)) {
+          // Standalone comment
+          parts.push(" ", path.call(print, "children", i));
         } else if (
           child.type === "equation_list" ||
           child.type === "statement_list"
@@ -1790,12 +1880,38 @@ export const printModelica: Printer<ASTNode>["print"] = (
 
     case "else_when_equation_clause":
     case "else_when_statement_clause": {
-      const parts: Doc[] = ["elsewhen "];
+      const parts: Doc[] = [];
+      let seenCondition = false;
 
       for (let i = 0; i < node.children.length; i++) {
         const child = node.children[i];
+
+        // Helper to check and consume trailing comment on same line
+        const maybeTrailingComment = (): Doc[] => {
+          if (i + 1 < node.children.length) {
+            const nextChild = node.children[i + 1];
+            if (isComment(nextChild) && onSameLine(child, nextChild)) {
+              i++; // Skip the comment in the main loop
+              return [" ", path.call(print, "children", i)];
+            }
+          }
+          return [];
+        };
+
         if (child.type === "expression") {
-          parts.push(path.call(print, "children", i), " then");
+          // Condition expression - prepend "elsewhen " for the first one
+          if (!seenCondition) {
+            parts.push("elsewhen ", path.call(print, "children", i));
+            seenCondition = true;
+          } else {
+            parts.push(path.call(print, "children", i));
+          }
+        } else if (child.type === "then") {
+          // "then" keyword with possible trailing comment
+          parts.push(" then", ...maybeTrailingComment());
+        } else if (isComment(child)) {
+          // Standalone comment
+          parts.push(" ", path.call(print, "children", i));
         } else if (
           child.type === "equation_list" ||
           child.type === "statement_list"
@@ -1929,11 +2045,25 @@ export const printModelica: Printer<ASTNode>["print"] = (
       let elseExprDoc: Doc = "";
       const elseIfParts: Doc[] = [];
 
+      // Helper to skip keyword tokens (then, else) that are now in the AST
+      const skipKeywords = () => {
+        while (
+          childIdx < children.length &&
+          (children[childIdx].type === "then" ||
+            children[childIdx].type === "else")
+        ) {
+          childIdx++;
+        }
+      };
+
       // First child is condition
       if (children[childIdx]) {
         conditionParts.push(path.call(print, "children", childIdx));
         childIdx++;
       }
+
+      // Skip 'then' keyword if present
+      skipKeywords();
 
       // Then expression (after 'then')
       if (children[childIdx] && children[childIdx].type !== "else_if_clause") {
@@ -1943,13 +2073,17 @@ export const printModelica: Printer<ASTNode>["print"] = (
 
       // Handle elseif clauses and else expression
       while (childIdx < children.length) {
+        // Skip keywords
+        skipKeywords();
+        if (childIdx >= children.length) break;
+
         const child = children[childIdx];
         if (child.type === "else_if_clause") {
           // elseif should be at same level as if/then/else
           // Use line (not softline) to ensure space before elseif when group doesn't break
           elseIfParts.push(line, path.call(print, "children", childIdx));
-        } else {
-          // else expression
+        } else if (child.type !== "then" && child.type !== "else") {
+          // else expression (skip keyword tokens)
           elseExprDoc = path.call(print, "children", childIdx);
         }
         childIdx++;
@@ -2017,6 +2151,10 @@ export const printModelica: Printer<ASTNode>["print"] = (
       let seenCondition = false;
 
       for (let i = 0; i < node.children.length; i++) {
+        const child = node.children[i];
+        // Skip keyword tokens (then) that are now in the AST
+        if (child.type === "then") continue;
+
         if (!seenCondition) {
           conditionParts.push(path.call(print, "children", i));
           seenCondition = true;

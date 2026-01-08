@@ -53,4 +53,9 @@ model Miscellaneous
         TLiqLvg_nominal,
         X=MediumLiq.X_default)
     "Transmitted heat flow rate at design conditions";
+  Buildings.Controls.OBC.CDL.Interfaces.BooleanInput u1PumHeaWatPri_actual[nEnaHeaWat +
+    nEnaHeaWat](each start=false)
+    if have_heaWat and not (have_valInlIso or have_valOutIso);
+equation
+  y = if initial() then yIni else u;
 end Miscellaneous;

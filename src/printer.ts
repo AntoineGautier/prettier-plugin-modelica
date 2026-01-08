@@ -2005,15 +2005,9 @@ export const printModelica: Printer<ASTNode>["print"] = (
       return join(":", path.map(print, "children"));
 
     case "binary_expression": {
-      // Extract operator from the gap between children in source text
-      if (node.children.length === 2) {
-        const leftChild = node.children[0];
-        const rightChild = node.children[1];
-        const operator = extractOperator(
-          node.text ?? "",
-          leftChild,
-          rightChild,
-        );
+      // All children: left operand, operator, right operand
+      if (node.children.length === 3) {
+        const operator = node.children[1].text ?? "";
 
         // Logical operators (and/or) - flatten SAME operator only
         // to avoid cascading indentation in conditions like:
@@ -2037,16 +2031,12 @@ export const printModelica: Printer<ASTNode>["print"] = (
             const n = p.getValue();
 
             // Check if this is a binary_expression with the SAME logical operator
-            if (n.type === "binary_expression" && n.children?.length === 2) {
-              const op = extractOperator(
-                n.text ?? "",
-                n.children[0],
-                n.children[1],
-              );
+            if (n.type === "binary_expression" && n.children?.length === 3) {
+              const op = n.children[1].text ?? "";
               if (op === operator) {
                 p.call(flattenLogical, "children", 0);
                 ops.push(op);
-                p.call(flattenLogical, "children", 1);
+                p.call(flattenLogical, "children", 2);
                 return;
               }
             }
@@ -2055,19 +2045,15 @@ export const printModelica: Printer<ASTNode>["print"] = (
               const child = n.children[0];
               if (
                 child.type === "binary_expression" &&
-                child.children?.length === 2
+                child.children?.length === 3
               ) {
-                const op = extractOperator(
-                  child.text ?? "",
-                  child.children[0],
-                  child.children[1],
-                );
+                const op = child.children[1].text ?? "";
                 if (op === operator) {
                   p.call(
                     (innerPath) => {
                       innerPath.call(flattenLogical, "children", 0);
                       ops.push(op);
-                      innerPath.call(flattenLogical, "children", 1);
+                      innerPath.call(flattenLogical, "children", 2);
                     },
                     "children",
                     0,
@@ -2156,12 +2142,8 @@ export const printModelica: Printer<ASTNode>["print"] = (
 
             // Check if this is a binary_expression (directly or wrapped in simple_expression)
             const binaryNode = unwrapToBinary(n);
-            if (binaryNode && binaryNode.children?.length === 2) {
-              const op = extractOperator(
-                binaryNode.text ?? "",
-                binaryNode.children[0],
-                binaryNode.children[1],
-              );
+            if (binaryNode && binaryNode.children?.length === 3) {
+              const op = binaryNode.children[1].text ?? "";
               if (arithmeticOperators.includes(op)) {
                 // Need to navigate to the actual binary_expression in the path
                 if (
@@ -2176,7 +2158,7 @@ export const printModelica: Printer<ASTNode>["print"] = (
                         // Now recurse into left and right children
                         innerPath.call(flatten, "children", 0);
                         ops.push(op);
-                        innerPath.call(flatten, "children", 1);
+                        innerPath.call(flatten, "children", 2);
                       } else {
                         flatten(innerPath);
                       }
@@ -2189,7 +2171,7 @@ export const printModelica: Printer<ASTNode>["print"] = (
                   // Direct binary_expression
                   p.call(flatten, "children", 0);
                   ops.push(op);
-                  p.call(flatten, "children", 1);
+                  p.call(flatten, "children", 2);
                   return;
                 }
               }
@@ -2304,7 +2286,7 @@ export const printModelica: Printer<ASTNode>["print"] = (
             path.call(print, "children", 0),
             " ",
             operator,
-            wrapContinuation(path.call(print, "children", 1), path),
+            wrapContinuation(path.call(print, "children", 2), path),
           ]);
         }
 
@@ -2314,7 +2296,7 @@ export const printModelica: Printer<ASTNode>["print"] = (
           path.call(print, "children", 0),
           " ",
           operator,
-          group([line, path.call(print, "children", 1)]),
+          group([line, path.call(print, "children", 2)]),
         ]);
       }
 
@@ -2323,24 +2305,25 @@ export const printModelica: Printer<ASTNode>["print"] = (
     }
 
     case "unary_expression": {
-      // Check for operator at start of text
-      const text = node.text ?? "";
       const parts: Doc[] = [];
 
-      if (text.startsWith("not ")) {
-        parts.push("not ");
-      } else if (text.startsWith(".-")) {
-        parts.push(".-");
-      } else if (text.startsWith(".+")) {
-        parts.push(".+");
-      } else if (text.startsWith("-")) {
-        parts.push("-");
-      } else if (text.startsWith("+")) {
-        parts.push("+");
-      }
-
       for (let i = 0; i < node.children.length; i++) {
-        parts.push(path.call(print, "children", i));
+        const child = node.children[i];
+        if (child.type === "not") {
+          // 'not' keyword requires trailing space
+          parts.push("not ");
+        } else if (
+          child.type === "-" ||
+          child.type === "+" ||
+          child.type === ".-" ||
+          child.type === ".+"
+        ) {
+          // Arithmetic unary operators (no space needed)
+          parts.push(child.text ?? child.type);
+        } else {
+          // The operand expression
+          parts.push(path.call(print, "children", i));
+        }
       }
       return parts;
     }
@@ -2552,6 +2535,13 @@ export const printModelica: Printer<ASTNode>["print"] = (
           parts.push(path.call(print, "children", i));
         } else if (child.type === "function_call_args") {
           parts.push(path.call(print, "children", i));
+        } else if (
+          child.type === "initial" ||
+          child.type === "der" ||
+          child.type === "pure"
+        ) {
+          // Built-in function keywords
+          parts.push(child.text ?? child.type);
         }
       }
       return parts;
@@ -3067,59 +3057,7 @@ function extractRedeclarePrefix(node: ASTNode): string {
   return "redeclare";
 }
 
-/**
- * Extract operator from binary expression text by finding what's between operands
- */
-function extractOperator(
-  fullText: string,
-  leftChild: ASTNode,
-  rightChild: ASTNode,
-): string {
-  // Calculate positions relative to fullText
-  const leftText = leftChild.text ?? "";
-  const rightText = rightChild.text ?? "";
 
-  // The operator is what's between leftText and rightText in fullText
-  const leftEnd = fullText.indexOf(leftText) + leftText.length;
-  const rightStart = fullText.lastIndexOf(rightText);
-
-  if (leftEnd >= 0 && rightStart > leftEnd) {
-    const operatorText = fullText.substring(leftEnd, rightStart).trim();
-    if (operatorText) {
-      return operatorText;
-    }
-  }
-
-  // Fallback: try to detect common operators in the full text
-  const operators = [
-    "==",
-    "<>",
-    "<=",
-    ">=",
-    ".+",
-    ".-",
-    ".*",
-    "./",
-    ".^",
-    "and",
-    "or",
-    "<",
-    ">",
-    "+",
-    "-",
-    "*",
-    "/",
-    "^",
-    "=",
-  ];
-  for (const op of operators) {
-    if (fullText.includes(` ${op} `) || fullText.includes(op)) {
-      return op;
-    }
-  }
-
-  return "?"; // Unknown operator
-}
 
 /**
  * Check if Doc array ends with a dot

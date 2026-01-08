@@ -17,13 +17,13 @@ function removeWhitespace(content: string): string {
   return content.replace(/\s+/g, "");
 }
 
-// Centralized error logging for idempotence failures
-function logIdempotenceError(
+// Centralized error logging for correctness failures
+function logCorrectnessError(
   sourceNoWS: string,
   formattedNoWS: string,
   additionalMessage?: string,
 ): void {
-  console.error("✗ Idempotence check failed!");
+  console.error("✗ Correctness check failed!");
   console.error(
     "Original and formatted content differ (ignoring whitespace).",
   );
@@ -59,22 +59,22 @@ function printHelp() {
   console.log("");
   console.log("Options:");
   console.log("  --write, -w          Write formatted output back to input file");
-  console.log("                       (will not write if idempotence check fails)");
+  console.log("                       (will not write if correctness check fails)");
   console.log("  --output, -o <file>  Write formatted output to specified file");
-  console.log("                       (will not write if idempotence check fails)");
-  console.log("  --check, -c          Check if formatting is idempotent");
-  console.log("                       (exit 0 if idempotent, exit 1 if not)");
+  console.log("                       (will not write if correctness check fails)");
+  console.log("  --check, -c          Check correctness");
+  console.log("                       (exit 0 if correct, exit 1 if not)");
   console.log("  --verbose, -v        Show detailed output");
   console.log("  --help, -h           Show this help message");
   console.log("");
-  console.log("Note: Idempotence check compares original and formatted content");
-  console.log("      (ignoring whitespace) to ensure formatting is stable.");
+  console.log("Note: Correctness check compares original and formatted content");
+  console.log("      (ignoring whitespace) to ensure formatting doesn't break code.");
   console.log("");
   console.log("Examples:");
   console.log("  modelica-format model.mo              # Preview formatted output");
   console.log("  modelica-format model.mo --write      # Format and overwrite");
   console.log("  modelica-format model.mo -o out.mo    # Format and save to new file");
-  console.log("  modelica-format model.mo --check      # Check if idempotent");
+  console.log("  modelica-format model.mo --check      # Check correctness");
 }
 
 if (args.length === 0 || args.includes("--help") || args.includes("-h")) {
@@ -169,15 +169,15 @@ async function run() {
 
     const isUnchanged = formatted === sourceCode;
 
-    // Check idempotence - compare original and formatted (ignoring whitespace)
+    // Check correctness - compare original and formatted (ignoring whitespace)
     const sourceNoWS = removeWhitespace(sourceCode);
     const formattedNoWS = removeWhitespace(formatted);
     const isIdempotent = sourceNoWS === formattedNoWS;
 
-    // If --check flag is present, verify idempotence first
+    // If --check flag is present, verify correctness first
     if (check) {
       if (!isIdempotent) {
-        logIdempotenceError(sourceNoWS, formattedNoWS);
+        logCorrectnessError(sourceNoWS, formattedNoWS);
         process.exit(1);
       }
 
@@ -205,7 +205,7 @@ async function run() {
           "lines",
         );
         console.log(isUnchanged ? "✓ No changes" : "✓ Formatted");
-        console.log("✓ Idempotence verified");
+        console.log("✓ Correctness verified");
       }
       process.exit(0);
     }

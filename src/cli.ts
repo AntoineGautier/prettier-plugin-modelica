@@ -17,6 +17,36 @@ function removeWhitespace(content: string): string {
   return content.replace(/\s+/g, "");
 }
 
+// Centralized error logging for idempotence failures
+function logIdempotenceError(
+  sourceNoWS: string,
+  formattedNoWS: string,
+  additionalMessage?: string,
+): void {
+  console.error("✗ Idempotence check failed!");
+  console.error(
+    "Original and formatted content differ (ignoring whitespace).",
+  );
+  console.error(
+    "Original length (no whitespace):",
+    sourceNoWS.length,
+    "chars",
+  );
+  console.error(
+    "Formatted length (no whitespace):",
+    formattedNoWS.length,
+    "chars",
+  );
+  console.error(
+    "Difference:",
+    Math.abs(formattedNoWS.length - sourceNoWS.length),
+    "chars",
+  );
+  if (additionalMessage) {
+    console.error(additionalMessage);
+  }
+}
+
 // Parse command-line arguments
 const args = process.argv.slice(2);
 
@@ -34,7 +64,7 @@ function printHelp() {
   console.log("                       (will not write if idempotence check fails)");
   console.log("  --check, -c          Check if formatting is idempotent");
   console.log("                       (exit 0 if idempotent, exit 1 if not)");
-  console.log("  --quiet, -q          Suppress output except errors");
+  console.log("  --verbose, -v        Show detailed output");
   console.log("  --help, -h           Show this help message");
   console.log("");
   console.log("Note: Idempotence check compares original and formatted content");
@@ -55,7 +85,7 @@ if (args.length === 0 || args.includes("--help") || args.includes("-h")) {
 // Parse options
 const writeOutput = args.includes("--write") || args.includes("-w");
 const check = args.includes("--check") || args.includes("-c");
-const quiet = args.includes("--quiet") || args.includes("-q");
+const verbose = args.includes("--verbose") || args.includes("-v");
 
 // Parse --output / -o option
 let outputFile: string | undefined;
@@ -74,8 +104,8 @@ const optionArgs = new Set([
   "-o",
   "--check",
   "-c",
-  "--quiet",
-  "-q",
+  "--verbose",
+  "-v",
 ]);
 let inputFile: string | undefined;
 for (let i = 0; i < args.length; i++) {
@@ -108,14 +138,14 @@ if (!fs.existsSync(sourceFile)) {
 }
 
 // Check file extension
-if (!sourceFile.endsWith(".mo") && !quiet) {
+if (!sourceFile.endsWith(".mo") && verbose) {
   console.warn(`Warning: File does not have .mo extension: ${sourceFile}`);
 }
 
 // Read the source file
 const sourceCode = fs.readFileSync(sourceFile, "utf8");
 
-if (!quiet) {
+if (verbose) {
   console.log("Input:", path.relative(process.cwd(), sourceFile));
   console.log(
     "Size:",
@@ -147,33 +177,13 @@ async function run() {
     // If --check flag is present, verify idempotence first
     if (check) {
       if (!isIdempotent) {
-        if (!quiet) {
-          console.log("✗ Idempotence check failed!");
-          console.log(
-            "Original and formatted content differ (ignoring whitespace).",
-          );
-          console.log(
-            "Original length (no whitespace):",
-            sourceNoWS.length,
-            "chars",
-          );
-          console.log(
-            "Formatted length (no whitespace):",
-            formattedNoWS.length,
-            "chars",
-          );
-          console.log(
-            "Difference:",
-            Math.abs(formattedNoWS.length - sourceNoWS.length),
-            "chars",
-          );
-        }
+        logIdempotenceError(sourceNoWS, formattedNoWS);
         process.exit(1);
       }
 
       // If only --check (no write/output), exit here
       if (!writeOutput && !outputFile) {
-        if (!quiet) {
+        if (verbose) {
           console.log("✓ Formatting is idempotent");
         }
         process.exit(0);
@@ -183,34 +193,9 @@ async function run() {
 
     // Write mode - write to file (only if idempotent)
     if (writeOutput || outputFile) {
-      // If --check wasn't used, still verify idempotence before writing
-      if (check && !isIdempotent) {
-        console.error("✗ Idempotence check failed!");
-        console.error(
-          "Original and formatted content differ (ignoring whitespace).",
-        );
-        console.error(
-          "Original length (no whitespace):",
-          sourceNoWS.length,
-          "chars",
-        );
-        console.error(
-          "Formatted length (no whitespace):",
-          formattedNoWS.length,
-          "chars",
-        );
-        console.error(
-          "Difference:",
-          Math.abs(formattedNoWS.length - sourceNoWS.length),
-          "chars",
-        );
-        console.error("File not written.");
-        process.exit(1);
-      }
-
       const targetFile = outputFile ? path.resolve(outputFile) : sourceFile;
       fs.writeFileSync(targetFile, formatted, "utf8");
-      if (!quiet) {
+      if (verbose) {
         console.log("Output:", path.relative(process.cwd(), targetFile));
         console.log(
           "Size:",
@@ -225,44 +210,18 @@ async function run() {
       process.exit(0);
     }
 
-    // Default - print to stdout (check idempotence first)
-    if (!isIdempotent) {
-      console.error("✗ Idempotence check failed!");
-      console.error(
-        "Original and formatted content differ (ignoring whitespace).",
-      );
-      console.error(
-        "Original length (no whitespace):",
-        sourceNoWS.length,
-        "chars",
-      );
-      console.error(
-        "Formatted length (no whitespace):",
-        formattedNoWS.length,
-        "chars",
-      );
-      console.error(
-        "Difference:",
-        Math.abs(formattedNoWS.length - sourceNoWS.length),
-        "chars",
-      );
-      process.exit(1);
-    }
-
-    if (quiet) {
-      process.stdout.write(formatted);
-    } else {
+    if (verbose) {
       console.log("");
       console.log("--- Formatted Output ---");
       console.log("");
-      process.stdout.write(formatted);
     }
+    process.stdout.write(formatted);
   } catch (error) {
     console.error(
       "Error:",
       error instanceof Error ? error.message : String(error),
     );
-    if (!quiet && error instanceof Error && error.stack) {
+    if (verbose && error instanceof Error && error.stack) {
       console.error("");
       console.error(error.stack);
     }

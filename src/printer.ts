@@ -3188,7 +3188,7 @@ export function embedHTML(path: AstPath<ASTNode>, _options: any) {
       const formattedHtml = await prettier.default.format(processedHtml, {
         parser: "html",
         printWidth: opts.printWidth || 80,
-        htmlWhitespaceSensitivity: "ignore",
+        htmlWhitespaceSensitivity: "css",
       });
 
       // Step 3: Post-process (restore preserved blocks, re-escape quotes)

@@ -954,7 +954,9 @@ annotation(defaultComponentName="pla",
   component <code>pla</code> in the model
   <a href=\"modelica://Buildings.Templates.Plants.HeatPumps.Validation.AirToWater\">
     Buildings.Templates.Plants.HeatPumps.Validation.AirToWater</a> and
-  selecting \"Show Component\" from the context menu.
+  selecting \"Show Component\" from the context menu. The available CHW and HW
+  loads used in logic are rolling averages over a period of
+  <code>dtMea</code> of values sampled every <i>30</i>&nbsp;s.
 </p>
 <p align=\"center\">
   <img

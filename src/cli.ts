@@ -11,10 +11,12 @@ import * as path from "path";
 import { format } from "prettier";
 import plugin from "./index.js";
 
-// Helper function to remove whitespace for content comparison
-function removeWhitespace(content: string): string {
+// Helper function to remove whitespace and block comments for content comparison
+function removeWhitespaceAndComments(content: string): string {
+  // Remove block comments /* ... */
+  const noComments = content.replace(/\/\*[\s\S]*?\*\//g, "");
   // Remove all whitespace characters (spaces, tabs, newlines, etc.)
-  return content.replace(/\s+/g, "");
+  return noComments.replace(/\s+/g, "");
 }
 
 // Find the first differing position between two strings
@@ -100,7 +102,7 @@ function printHelp() {
   console.log("  --help, -h           Show this help message");
   console.log("");
   console.log("Note: Correctness check compares original and formatted content");
-  console.log("      (ignoring whitespace) to ensure formatting doesn't break code.");
+  console.log("      (ignoring whitespace and block comment) to ensure formatting doesn't break code.");
   console.log("");
   console.log("Examples:");
   console.log("  modelica-format model.mo              # Preview formatted output");
@@ -202,8 +204,8 @@ async function run() {
     const isUnchanged = formatted === sourceCode;
 
     // Check correctness - compare original and formatted (ignoring whitespace)
-    const sourceNoWS = removeWhitespace(sourceCode);
-    const formattedNoWS = removeWhitespace(formatted);
+    const sourceNoWS = removeWhitespaceAndComments(sourceCode);
+    const formattedNoWS = removeWhitespaceAndComments(formatted);
     const isIdempotent = sourceNoWS === formattedNoWS;
 
     // If --check flag is present, verify correctness first

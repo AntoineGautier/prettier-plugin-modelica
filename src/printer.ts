@@ -2367,17 +2367,27 @@ export const printModelica: Printer<ASTNode>["print"] = (
     }
 
     case "multiple_output_function_application_statement": {
-      const parts: Doc[] = ["("];
+      // Structure: (output_list) := function_ref(args);
+      // AST: parenthesized_expression, :=, component_reference, function_call_args
+      const parts: Doc[] = [];
 
       for (let i = 0; i < node.children.length; i++) {
         const child = node.children[i];
-        if (child.type === "output_expression_list") {
+        if (child.type === "parenthesized_expression") {
+          // The parenthesized expression contains the output variables
           parts.push(path.call(print, "children", i));
-        } else if (
-          child.type === "component_reference" ||
-          child.type === "function_application"
-        ) {
-          parts.push(") := ", path.call(print, "children", i));
+        } else if (child.type === "output_expression_list") {
+          // Fallback for older AST structure
+          parts.push("(", path.call(print, "children", i), ")");
+        } else if (child.type === "component_reference") {
+          // Function reference (may be followed by function_call_args)
+          parts.push(" := ", path.call(print, "children", i));
+        } else if (child.type === "function_application") {
+          // Alternative: function_application instead of component_reference + function_call_args
+          parts.push(" := ", path.call(print, "children", i));
+        } else if (child.type === "function_call_args") {
+          // Function arguments - append directly after component_reference
+          parts.push(path.call(print, "children", i));
         }
       }
 
@@ -3376,14 +3386,25 @@ export const printModelica: Printer<ASTNode>["print"] = (
       }
 
       // Multiple arguments:
-      // - Try to fit everything on one line
-      // - If it doesn't fit, break after opening paren and indent all args
+      // - Try to fit all args on one line (may break before '(' if line is long)
+      // - If args don't fit on one line, put each arg on its own line (all-or-nothing)
       // - Closing paren on same line as last arg
-      // - If in continuation context, skip indent (parent already provides it)
+      //
+      // Use a nested group structure:
+      // - Outer group handles break after '('
+      // - Inner conditionalGroup handles args inline vs broken (all-or-nothing)
+      //
+      // The inner conditionalGroup is evaluated AFTER the softline break decision,
+      // so it measures from the indented position, not from the function name.
+      const argsInline = join(", ", allArgs);
+      const argsBroken = join([",", hardline], allArgs);
+      const argsDoc = conditionalGroup([argsInline, argsBroken]);
+
+      // If already in continuation context, don't add extra indent
       if (inContinuation) {
-        return group(["(", softline, join([",", line], allArgs), ")"]);
+        return group(["(", softline, argsDoc, ")"]);
       }
-      return group(["(", indent([softline, join([",", line], allArgs)]), ")"]);
+      return group(["(", indent([softline, argsDoc]), ")"]);
     }
 
     case "function_arguments": {

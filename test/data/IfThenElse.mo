@@ -149,9 +149,7 @@ equation
   // From TwoWayPressureIndependent valve model
   m_flow_set = m_flow_nominal * phi;
   dp_min = Buildings.Fluid.BaseClasses.FlowModels.basicFlowFunction_m_flow(
-    m_flow=m_flow_set,
-    k=kTotMax,
-    m_flow_turbulent=m_flow_turbulent);
+    m_flow=m_flow_set, k=kTotMax, m_flow_turbulent=m_flow_turbulent);
   if from_dp then
     dp_x = dp - dp_min;
     dp_x1 = -dp_x2;
@@ -160,7 +158,7 @@ equation
     m_flow_y1 = Buildings.Fluid.BaseClasses.FlowModels.basicFlowFunction_dp(
       dp=min(dp, dp_min + dp_x1),
       k=kTotMax,
-      m_flow_turbulent=m_flow_turbulent);
+      m_flow_turbulent=m_flow_turbulentjkjkjkjk);
     // max function ensures that m_flow_y2 does not decrease further for dp_x < dp_x2
     m_flow_y2 = m_flow_set + coeff1 * max(dp_x, dp_x2);
     m_flow_smooth = noEvent(

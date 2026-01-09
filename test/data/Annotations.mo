@@ -9,6 +9,7 @@ model Annotations
         Buildings.Media.Antifreeze.PropyleneGlycolWater(property_T=293.15,
           X_a=0.40)
         "Propylene glycol water, 40% mass fraction")));
+
   // Plants with AWHP.
   parameter Buildings.Templates.Plants.HeatPumps.Types.Distribution typDis_select1(
     start=Buildings.Templates.Plants.HeatPumps.Types.Distribution.Constant1Variable2) =

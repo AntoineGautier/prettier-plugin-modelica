@@ -40,12 +40,14 @@ package Air
   constant AbsolutePressure pStp = reference_p
     "Pressure for which fluid density is defined";
   constant Density dStp = 1.2 "Fluid density at pressure pStp";
+
   // Redeclare ThermodynamicState to avoid the warning
   // "Base class ThermodynamicState is replaceable"
   // during model check
   redeclare record extends ThermodynamicState
     "ThermodynamicState record for moist air"
   end ThermodynamicState;
+
   // There must not be any stateSelect=StateSelect.prefer for
   // the pressure.
   // Otherwise, translateModel("Buildings.Fluid.FMI.ExportContainers.Examples.FMUs.ResistanceVolume")
@@ -100,17 +102,21 @@ package Air
     Modelica.Units.NonSI.Pressure_bar p_bar =
       Modelica.Units.Conversions.to_bar(p)
       "Absolute pressure of medium in [bar]";
+
     // Local connector definition, used for equation balancing check
     connector InputAbsolutePressure = input Modelica.Units.SI.AbsolutePressure
       "Pressure as input signal connector";
+
     connector InputSpecificEnthalpy = input Modelica.Units.SI.SpecificEnthalpy
       "Specific enthalpy as input signal connector";
+
     connector InputMassFraction = input Modelica.Units.SI.MassFraction
       "Mass fraction as input signal connector";
+
     // Declarations for Air only
     protected
-      Modelica.Units.SI.TemperatureDifference dT(start=T_default - reference_T)
-        "Temperature difference used to compute enthalpy";
+    Modelica.Units.SI.TemperatureDifference dT(start=T_default - reference_T)
+      "Temperature difference used to compute enthalpy";
   equation
     MM = 1 / (X[1] / steam.MM + (X[2]) / dryair.MM);
     dT = T - reference_T;
@@ -161,73 +167,74 @@ as required from medium model \"Buildings.Media.Air\".");
       textColor={0,0,255})}),
     Documentation(
       info="<html>
-<p>Model with basic thermodynamic properties.</p>
-<p>
-  This model provides equation for the following thermodynamic properties:
-</p>
-<table
-  border=\"1\"
-  cellspacing=\"0\"
-  cellpadding=\"2\"
-  summary=\"Thermodynamic properties\"
->
-  <tr>
-    <td><strong>Variable</strong></td>
-    <td><strong>Unit</strong></td>
-    <td><strong>Description</strong></td>
-  </tr>
-  <tr>
-    <td>T</td>
-    <td>K</td>
-    <td>temperature</td>
-  </tr>
-  <tr>
-    <td>p</td>
-    <td>Pa</td>
-    <td>absolute pressure</td>
-  </tr>
-  <tr>
-    <td>d</td>
-    <td>kg/m3</td>
-    <td>density</td>
-  </tr>
-  <tr>
-    <td>h</td>
-    <td>J/kg</td>
-    <td>specific enthalpy</td>
-  </tr>
-  <tr>
-    <td>u</td>
-    <td>J/kg</td>
-    <td>specific internal energy</td>
-  </tr>
-  <tr>
-    <td>Xi[nXi]</td>
-    <td>kg/kg</td>
-    <td>independent mass fractions m_i/m</td>
-  </tr>
-  <tr>
-    <td>R</td>
-    <td>J/kg.K</td>
-    <td>gas constant</td>
-  </tr>
-  <tr>
-    <td>M</td>
-    <td>kg/mol</td>
-    <td>molar mass</td>
-  </tr>
-</table>
-</html>",
+  <p>Model with basic thermodynamic properties.</p>
+  <p>
+    This model provides equation for the following thermodynamic properties:
+  </p>
+  <table
+    border=\"1\"
+    cellspacing=\"0\"
+    cellpadding=\"2\"
+    summary=\"Thermodynamic properties\"
+  >
+    <tr>
+      <td><strong>Variable</strong></td>
+      <td><strong>Unit</strong></td>
+      <td><strong>Description</strong></td>
+    </tr>
+    <tr>
+      <td>T</td>
+      <td>K</td>
+      <td>temperature</td>
+    </tr>
+    <tr>
+      <td>p</td>
+      <td>Pa</td>
+      <td>absolute pressure</td>
+    </tr>
+    <tr>
+      <td>d</td>
+      <td>kg/m3</td>
+      <td>density</td>
+    </tr>
+    <tr>
+      <td>h</td>
+      <td>J/kg</td>
+      <td>specific enthalpy</td>
+    </tr>
+    <tr>
+      <td>u</td>
+      <td>J/kg</td>
+      <td>specific internal energy</td>
+    </tr>
+    <tr>
+      <td>Xi[nXi]</td>
+      <td>kg/kg</td>
+      <td>independent mass fractions m_i/m</td>
+    </tr>
+    <tr>
+      <td>R</td>
+      <td>J/kg.K</td>
+      <td>gas constant</td>
+    </tr>
+    <tr>
+      <td>M</td>
+      <td>kg/mol</td>
+      <td>molar mass</td>
+    </tr>
+  </table>
+  </html>",
       revisions="<html>
-<ul>
-  <li>
-    September 22, 2020, by Michael Wetter:<br />
-    First implementation based on Modelica Standard Library, but with
-    <code>noEvent</code> added to check of bounds.
-  </li>
-</ul>
-</html>"));
+  <ul>
+    <li>
+      September 22, 2020, by Michael Wetter:<br />
+      First implementation based on Modelica Standard Library, but with
+      <code>noEvent</code> added to check of bounds.
+    </li>
+  </ul>
+  </html>"));
   end BaseProperties;
+
   redeclare function density
     "Gas density"
     extends Modelica.Icons.Function;
@@ -239,10 +246,11 @@ as required from medium model \"Buildings.Media.Air\".");
     Inline=true,
     Documentation(
       info="<html>
-Density is computed from pressure, temperature and composition in the
-thermodynamic state record applying the ideal gas law.
-</html>"));
+  Density is computed from pressure, temperature and composition in the
+  thermodynamic state record applying the ideal gas law.
+  </html>"));
   end density;
+
   redeclare function extends dynamicViscosity
     "Return the dynamic viscosity of dry air"
   algorithm
@@ -251,28 +259,29 @@ thermodynamic state record applying the ideal gas law.
     Inline=true,
     Documentation(
       info="<html>
-<p>This function returns the dynamic viscosity.</p>
-<h4>Implementation</h4>
-<p>
-  The function is based on the 5th order polynomial of
-  <a href=\"modelica://Modelica.Media.Air.MoistAir.dynamicViscosity\">
-    Modelica.Media.Air.MoistAir.dynamicViscosity</a>. However, for the
-  typical range of temperatures encountered in building applications, a linear
-  function sufficies. This implementation is therefore the above 5th order
-  polynomial, linearized around <i>20</i>&deg;C. The relative error of this
-  linearization is <i>0.4</i>% at <i>-20</i>&deg;C, and less then <i>0.2</i>%
-  between <i>-5</i>&deg;C and <i>+50</i>&deg;C.
-</p>
-</html>",
+  <p>This function returns the dynamic viscosity.</p>
+  <h4>Implementation</h4>
+  <p>
+    The function is based on the 5th order polynomial of
+    <a href=\"modelica://Modelica.Media.Air.MoistAir.dynamicViscosity\">
+      Modelica.Media.Air.MoistAir.dynamicViscosity</a>. However, for the
+    typical range of temperatures encountered in building applications, a linear
+    function sufficies. This implementation is therefore the above 5th order
+    polynomial, linearized around <i>20</i>&deg;C. The relative error of this
+    linearization is <i>0.4</i>% at <i>-20</i>&deg;C, and less then <i>0.2</i>%
+    between <i>-5</i>&deg;C and <i>+50</i>&deg;C.
+  </p>
+  </html>",
       revisions="<html>
-<ul>
-  <li>
-    December 19, 2013, by Michael Wetter:<br />
-    First implementation.
-  </li>
-</ul>
-</html>"));
+  <ul>
+    <li>
+      December 19, 2013, by Michael Wetter:<br />
+      First implementation.
+    </li>
+  </ul>
+  </html>"));
   end dynamicViscosity;
+
   redeclare function enthalpyOfCondensingGas
     "Enthalpy of steam per unit mass of steam"
     extends Modelica.Icons.Function;
@@ -284,6 +293,7 @@ thermodynamic state record applying the ideal gas law.
     Inline=true,
     derivative=der_enthalpyOfCondensingGas);
   end enthalpyOfCondensingGas;
+
   redeclare replaceable function extends enthalpyOfGas
     "Enthalpy of gas mixture per unit mass of gas mixture"
   algorithm
@@ -291,6 +301,7 @@ thermodynamic state record applying the ideal gas law.
         X[Water]);
   annotation(Inline=true);
   end enthalpyOfGas;
+
   redeclare replaceable function extends enthalpyOfLiquid
     "Enthalpy of liquid (per unit mass of liquid) which is linear in the temperature"
   algorithm
@@ -299,6 +310,7 @@ thermodynamic state record applying the ideal gas law.
     Inline=true,
     derivative=der_enthalpyOfLiquid);
   end enthalpyOfLiquid;
+
   redeclare function enthalpyOfNonCondensingGas
     "Enthalpy of non-condensing gas per unit mass of steam"
     extends Modelica.Icons.Function;
@@ -310,12 +322,14 @@ thermodynamic state record applying the ideal gas law.
     Inline=true,
     derivative=der_enthalpyOfNonCondensingGas);
   end enthalpyOfNonCondensingGas;
+
   redeclare function extends enthalpyOfVaporization
     "Enthalpy of vaporization of water"
   algorithm
     r0 := h_fg;
   annotation(Inline=true);
   end enthalpyOfVaporization;
+
   redeclare function extends gasConstant
     "Return ideal gas constant as a function from thermodynamic state, only valid for phi<1"
   algorithm
@@ -324,11 +338,12 @@ thermodynamic state record applying the ideal gas law.
     Inline=true,
     Documentation(
       info="<html>
-The ideal gas constant for moist air is computed from
-<a href=\"modelica://Modelica.Media.Air.MoistAir.ThermodynamicState\">thermodynamic state</a>
-assuming that all water is in the gas phase.
-</html>"));
+  The ideal gas constant for moist air is computed from
+  <a href=\"modelica://Modelica.Media.Air.MoistAir.ThermodynamicState\">thermodynamic state</a>
+  assuming that all water is in the gas phase.
+  </html>"));
   end gasConstant;
+
   redeclare function extends pressure
     "Returns pressure of ideal gas as a function of the thermodynamic state record"
   algorithm
@@ -337,10 +352,11 @@ assuming that all water is in the gas phase.
     Inline=true,
     Documentation(
       info="<html>
-Pressure is returned from the thermodynamic state record input as a simple
-assignment.
-</html>"));
+  Pressure is returned from the thermodynamic state record input as a simple
+  assignment.
+  </html>"));
   end pressure;
+
   redeclare function extends isobaricExpansionCoefficient
     "Isobaric expansion coefficient beta"
   algorithm
@@ -349,32 +365,33 @@ assignment.
     Inline=true,
     Documentation(
       info="<html>
-<p>
-  This function returns the isobaric expansion coefficient at constant
-  pressure, which is zero for this medium. The isobaric expansion coefficient
-  at constant pressure is
-</p>
-<p align=\"center\" style=\"font-style: italic\">
-  &beta;<sub>p</sub> = - 1 &frasl; v &nbsp; (&part; v &frasl; &part; T)<sub
-    >p</sub
-  >
-  = 0,
-</p>
-<p>
-  where
-  <i>v</i> is the specific volume, <i>T</i> is the temperature and <i>p</i> is
-  the pressure.
-</p>
-</html>",
+  <p>
+    This function returns the isobaric expansion coefficient at constant
+    pressure, which is zero for this medium. The isobaric expansion coefficient
+    at constant pressure is
+  </p>
+  <p align=\"center\" style=\"font-style: italic\">
+    &beta;<sub>p</sub> = - 1 &frasl; v &nbsp; (&part; v &frasl; &part; T)<sub
+      >p</sub
+    >
+    = 0,
+  </p>
+  <p>
+    where
+    <i>v</i> is the specific volume, <i>T</i> is the temperature and <i>p</i> is
+    the pressure.
+  </p>
+  </html>",
       revisions="<html>
-<ul>
-  <li>
-    December 18, 2013, by Michael Wetter:<br />
-    First implementation.
-  </li>
-</ul>
-</html>"));
+  <ul>
+    <li>
+      December 18, 2013, by Michael Wetter:<br />
+      First implementation.
+    </li>
+  </ul>
+  </html>"));
   end isobaricExpansionCoefficient;
+
   redeclare function extends isothermalCompressibility
     "Isothermal compressibility factor"
   algorithm
@@ -383,31 +400,32 @@ assignment.
     Inline=true,
     Documentation(
       info="<html>
-<p>
-  This function returns the isothermal compressibility coefficient. The
-  isothermal compressibility is
-</p>
-<p align=\"center\" style=\"font-style: italic\">
-  &kappa;<sub>T</sub> = -1 &frasl; v &nbsp; (&part; v &frasl; &part; p)<sub
-    >T</sub
-  >
-  = -1 &frasl; p,
-</p>
-<p>
-  where
-  <i>v</i> is the specific volume, <i>T</i> is the temperature and <i>p</i> is
-  the pressure.
-</p>
-</html>",
+  <p>
+    This function returns the isothermal compressibility coefficient. The
+    isothermal compressibility is
+  </p>
+  <p align=\"center\" style=\"font-style: italic\">
+    &kappa;<sub>T</sub> = -1 &frasl; v &nbsp; (&part; v &frasl; &part; p)<sub
+      >T</sub
+    >
+    = -1 &frasl; p,
+  </p>
+  <p>
+    where
+    <i>v</i> is the specific volume, <i>T</i> is the temperature and <i>p</i> is
+    the pressure.
+  </p>
+  </html>",
       revisions="<html>
-<ul>
-  <li>
-    December 18, 2013, by Michael Wetter:<br />
-    First implementation.
-  </li>
-</ul>
-</html>"));
+  <ul>
+    <li>
+      December 18, 2013, by Michael Wetter:<br />
+      First implementation.
+    </li>
+  </ul>
+  </html>"));
   end isothermalCompressibility;
+
   redeclare function extends saturationPressure
     "Saturation curve valid for 223.16 <= T <= 373.16 (and slightly outside with less accuracy)"
   algorithm
@@ -416,10 +434,12 @@ assignment.
   annotation(smoothOrder=5,
     Inline=true);
   end saturationPressure;
+
   redeclare function extends specificEntropy
     "Return the specific entropy, only valid for phi<1"
+
     protected
-      Modelica.Units.SI.MoleFraction [2] Y "Molar fraction";
+    Modelica.Units.SI.MoleFraction [2] Y "Molar fraction";
   algorithm
     Y := massToMoleFractions(state.X, {steam.MM, dryair.MM});
     s := specificHeatCapacityCp(state) * Modelica.Math.log(
@@ -430,61 +450,62 @@ assignment.
   annotation(Inline=true,
     Documentation(
       info="<html>
-<p>This function computes the specific entropy.</p>
-<p>The specific entropy of the mixture is obtained from</p>
-<p align=\"center\" style=\"font-style: italic\">
-  s = s<sub>s</sub> + s<sub>m</sub>,
-</p>
-<p>
-  where
-  <i>s<sub>s</sub></i> is the entropy change due to the state change (relative
-  to the reference temperature) and <i>s<sub>m</sub></i> is the entropy change
-  due to mixing of the dry air and water vapor.
-</p>
-<p>The entropy change due to change in state is obtained from</p>
-<p align=\"center\" style=\"font-style: italic\">
-  s<sub>s</sub> = c<sub>v</sub> ln(T/T<sub>0</sub>) + R ln(v/v<sub>0</sub>)
-  <br />
-  = c<sub>v</sub> ln(T/T<sub>0</sub>) + R ln(&rho;<sub>0</sub>/&rho;)
-</p>
-<p>
-  If we assume <i>&rho; = p<sub>0</sub>/(R T)</i>, and because
-  <i>c<sub>p</sub> = c<sub>v</sub> + R</i>, we can write
-</p>
-<p align=\"center\" style=\"font-style: italic\">
-  s<sub>s</sub> = c<sub>v</sub> ln(T/T<sub>0</sub>) + R ln(T/T<sub>0</sub>)
-  <br />
-  =c<sub>p</sub> ln(T/T<sub>0</sub>).
-</p>
-<p>
-  Next, the entropy of mixing is obtained from a reversible isothermal
-  expansion process. Hence,
-</p>
-<p align=\"center\" style=\"font-style: italic\">
-  s<sub>m</sub> = -R &sum;<sub>i</sub>( X<sub>i</sub> &frasl; M<sub>i</sub>
-  ln(Y<sub>i</sub> p/p<sub>0</sub>)),
-</p>
-<p>
-  where <i>R</i> is the gas constant, <i>X</i> is the mass fraction,
-  <i>M</i> is the molar mass, and <i>Y</i> is the mole fraction.
-</p>
-<p>
-  To obtain the state for a given pressure, entropy and mass fraction, use
-  <a href=\"modelica://Buildings.Media.Air.setState_psX\">
-    Buildings.Media.Air.setState_psX</a>.
-</p>
-<h4>Limitations</h4>
-<p>This function is only valid for a relative humidity below 100%.</p>
-</html>",
+  <p>This function computes the specific entropy.</p>
+  <p>The specific entropy of the mixture is obtained from</p>
+  <p align=\"center\" style=\"font-style: italic\">
+    s = s<sub>s</sub> + s<sub>m</sub>,
+  </p>
+  <p>
+    where
+    <i>s<sub>s</sub></i> is the entropy change due to the state change (relative
+    to the reference temperature) and <i>s<sub>m</sub></i> is the entropy change
+    due to mixing of the dry air and water vapor.
+  </p>
+  <p>The entropy change due to change in state is obtained from</p>
+  <p align=\"center\" style=\"font-style: italic\">
+    s<sub>s</sub> = c<sub>v</sub> ln(T/T<sub>0</sub>) + R ln(v/v<sub>0</sub>)
+    <br />
+    = c<sub>v</sub> ln(T/T<sub>0</sub>) + R ln(&rho;<sub>0</sub>/&rho;)
+  </p>
+  <p>
+    If we assume <i>&rho; = p<sub>0</sub>/(R T)</i>, and because
+    <i>c<sub>p</sub> = c<sub>v</sub> + R</i>, we can write
+  </p>
+  <p align=\"center\" style=\"font-style: italic\">
+    s<sub>s</sub> = c<sub>v</sub> ln(T/T<sub>0</sub>) + R ln(T/T<sub>0</sub>)
+    <br />
+    =c<sub>p</sub> ln(T/T<sub>0</sub>).
+  </p>
+  <p>
+    Next, the entropy of mixing is obtained from a reversible isothermal
+    expansion process. Hence,
+  </p>
+  <p align=\"center\" style=\"font-style: italic\">
+    s<sub>m</sub> = -R &sum;<sub>i</sub>( X<sub>i</sub> &frasl; M<sub>i</sub>
+    ln(Y<sub>i</sub> p/p<sub>0</sub>)),
+  </p>
+  <p>
+    where <i>R</i> is the gas constant, <i>X</i> is the mass fraction,
+    <i>M</i> is the molar mass, and <i>Y</i> is the mole fraction.
+  </p>
+  <p>
+    To obtain the state for a given pressure, entropy and mass fraction, use
+    <a href=\"modelica://Buildings.Media.Air.setState_psX\">
+      Buildings.Media.Air.setState_psX</a>.
+  </p>
+  <h4>Limitations</h4>
+  <p>This function is only valid for a relative humidity below 100%.</p>
+  </html>",
       revisions="<html>
-<ul>
-  <li>
-    November 27, 2013, by Michael Wetter:<br />
-    First implementation.
-  </li>
-</ul>
-</html>"));
+  <ul>
+    <li>
+      November 27, 2013, by Michael Wetter:<br />
+      First implementation.
+    </li>
+  </ul>
+  </html>"));
   end specificEntropy;
+
   redeclare function extends density_derp_T
     "Return the partial derivative of density with respect to pressure at constant temperature"
   algorithm
@@ -492,20 +513,21 @@ assignment.
   annotation(Inline=true,
     Documentation(
       info="<html>
-<p>
-  This function returns the partial derivative of density with respect to
-  pressure at constant temperature.
-</p>
-</html>",
+  <p>
+    This function returns the partial derivative of density with respect to
+    pressure at constant temperature.
+  </p>
+  </html>",
       revisions="<html>
-<ul>
-  <li>
-    December 18, 2013, by Michael Wetter:<br />
-    First implementation.
-  </li>
-</ul>
-</html>"));
+  <ul>
+    <li>
+      December 18, 2013, by Michael Wetter:<br />
+      First implementation.
+    </li>
+  </ul>
+  </html>"));
   end density_derp_T;
+
   redeclare function extends density_derT_p
     "Return the partial derivative of density with respect to temperature at constant pressure"
   algorithm
@@ -514,20 +536,21 @@ assignment.
     Inline=true,
     Documentation(
       info="<html>
-<p>
-  This function computes the derivative of density with respect to temperature
-  at constant pressure.
-</p>
-</html>",
+  <p>
+    This function computes the derivative of density with respect to temperature
+    at constant pressure.
+  </p>
+  </html>",
       revisions="<html>
-<ul>
-  <li>
-    December 18, 2013, by Michael Wetter:<br />
-    First implementation.
-  </li>
-</ul>
-</html>"));
+  <ul>
+    <li>
+      December 18, 2013, by Michael Wetter:<br />
+      First implementation.
+    </li>
+  </ul>
+  </html>"));
   end density_derT_p;
+
   redeclare function extends density_derX
     "Return the partial derivative of density with respect to mass fractions at constant pressure and temperature"
   algorithm
@@ -536,21 +559,22 @@ assignment.
     Inline=true,
     Documentation(
       info="<html>
-<p>
-  This function returns the partial derivative of density with respect to mass
-  fraction. This value is zero because in this medium, density is proportional
-  to pressure, but independent of the species concentration.
-</p>
-</html>",
+  <p>
+    This function returns the partial derivative of density with respect to mass
+    fraction. This value is zero because in this medium, density is proportional
+    to pressure, but independent of the species concentration.
+  </p>
+  </html>",
       revisions="<html>
-<ul>
-  <li>
-    December 18, 2013, by Michael Wetter:<br />
-    First implementation.
-  </li>
-</ul>
-</html>"));
+  <ul>
+    <li>
+      December 18, 2013, by Michael Wetter:<br />
+      First implementation.
+    </li>
+  </ul>
+  </html>"));
   end density_derX;
+
   redeclare replaceable function extends specificHeatCapacityCp
     "Specific heat capacity of gas mixture at constant pressure"
   algorithm
@@ -559,6 +583,7 @@ assignment.
     Inline=true,
     derivative=der_specificHeatCapacityCp);
   end specificHeatCapacityCp;
+
   redeclare replaceable function extends specificHeatCapacityCv
     "Specific heat capacity of gas mixture at constant volume"
   algorithm
@@ -567,6 +592,7 @@ assignment.
     Inline=true,
     derivative=der_specificHeatCapacityCv);
   end specificHeatCapacityCv;
+
   redeclare function setState_dTX
     "Return thermodynamic state as function of density d, temperature T and composition X"
     extends Modelica.Icons.Function;
@@ -583,14 +609,15 @@ assignment.
     Inline=true,
     Documentation(
       info="<html>
-<p>
-  The
-  <a href=\"modelica://Modelica.Media.Interfaces.PartialMixtureMedium.ThermodynamicState\">thermodynamic state record</a>
-  is computed from density <code>d</code>, temperature <code>T</code> and
-  composition <code>X</code>.
-</p>
-</html>"));
+  <p>
+    The
+    <a href=\"modelica://Modelica.Media.Interfaces.PartialMixtureMedium.ThermodynamicState\">thermodynamic state record</a>
+    is computed from density <code>d</code>, temperature <code>T</code> and
+    composition <code>X</code>.
+  </p>
+  </html>"));
   end setState_dTX;
+
   redeclare function extends setState_phX
     "Return thermodynamic state as function of pressure p, specific enthalpy h and composition X"
   algorithm
@@ -604,12 +631,13 @@ assignment.
     Inline=true,
     Documentation(
       info="<html>
-The
-<a href=\"modelica://Modelica.Media.Interfaces.PartialMixtureMedium.ThermodynamicState\">
-  thermodynamic state record</a> is computed from pressure p, specific
-enthalpy h and composition X.
-</html>"));
+  The
+  <a href=\"modelica://Modelica.Media.Interfaces.PartialMixtureMedium.ThermodynamicState\">
+    thermodynamic state record</a> is computed from pressure p, specific
+  enthalpy h and composition X.
+  </html>"));
   end setState_phX;
+
   redeclare function extends setState_pTX
     "Return thermodynamic state as function of p, T and composition X or Xi"
   algorithm
@@ -620,18 +648,20 @@ enthalpy h and composition X.
     Inline=true,
     Documentation(
       info="<html>
-The
-<a href=\"modelica://Modelica.Media.Interfaces.PartialMixtureMedium.ThermodynamicState\">
-  thermodynamic state record</a> is computed from pressure p, temperature T
-and composition X.
-</html>"));
+  The
+  <a href=\"modelica://Modelica.Media.Interfaces.PartialMixtureMedium.ThermodynamicState\">
+    thermodynamic state record</a> is computed from pressure p, temperature T
+  and composition X.
+  </html>"));
   end setState_pTX;
+
   redeclare function extends setState_psX
     "Return the thermodynamic state as function of p, s and composition X or Xi"
+
     protected
-      Modelica.Units.SI.MassFraction [2] X_int "Mass fraction";
-      Modelica.Units.SI.MoleFraction [2] Y "Molar fraction";
-      Modelica.Units.SI.Temperature T "Temperature";
+    Modelica.Units.SI.MassFraction [2] X_int "Mass fraction";
+    Modelica.Units.SI.MoleFraction [2] Y "Molar fraction";
+    Modelica.Units.SI.Temperature T "Temperature";
   algorithm
     if size(X, 1) == nX then
       X_int := X;
@@ -651,25 +681,26 @@ and composition X.
   annotation(Inline=true,
     Documentation(
       info="<html>
-<p>
-  This function returns the thermodynamic state based on pressure, specific
-  entropy and mass fraction.
-</p>
-<p>
-  The state is computed by symbolically solving
-  <a href=\"modelica://Buildings.Media.Air.specificEntropy\">
-    Buildings.Media.Air.specificEntropy</a> for temperature.
-</p>
-</html>",
+  <p>
+    This function returns the thermodynamic state based on pressure, specific
+    entropy and mass fraction.
+  </p>
+  <p>
+    The state is computed by symbolically solving
+    <a href=\"modelica://Buildings.Media.Air.specificEntropy\">
+      Buildings.Media.Air.specificEntropy</a> for temperature.
+  </p>
+  </html>",
       revisions="<html>
-<ul>
-  <li>
-    November 27, 2013, by Michael Wetter:<br />
-    First implementation.
-  </li>
-</ul>
-</html>"));
+  <ul>
+    <li>
+      November 27, 2013, by Michael Wetter:<br />
+      First implementation.
+    </li>
+  </ul>
+  </html>"));
   end setState_psX;
+
   redeclare replaceable function extends specificEnthalpy
     "Compute specific enthalpy from pressure, temperature and mass fraction"
   algorithm
@@ -678,6 +709,7 @@ and composition X.
   annotation(smoothOrder=5,
     Inline=true);
   end specificEnthalpy;
+
   redeclare replaceable function specificEnthalpy_pTX
     "Specific enthalpy"
     extends Modelica.Icons.Function;
@@ -692,27 +724,29 @@ and composition X.
     inverse(T=temperature_phX(p, h, X)),
     Documentation(
       info="<html>
-Specific enthalpy as a function of temperature and species concentration. The
-pressure is input for compatibility with the medium models, but the specific
-enthalpy is independent of the pressure.
-</html>",
+  Specific enthalpy as a function of temperature and species concentration. The
+  pressure is input for compatibility with the medium models, but the specific
+  enthalpy is independent of the pressure.
+  </html>",
       revisions="<html>
-<ul>
-  <li>
-    April 30, 2015, by Filip Jorissen and Michael Wetter:<br />
-    Added <code>Inline=true</code> for
-    <a href=\"https://github.com/ibpsa/modelica-ibpsa/issues/227\">
-      issue 227</a>.
-  </li>
-</ul>
-</html>"));
+  <ul>
+    <li>
+      April 30, 2015, by Filip Jorissen and Michael Wetter:<br />
+      Added <code>Inline=true</code> for
+      <a href=\"https://github.com/ibpsa/modelica-ibpsa/issues/227\">
+        issue 227</a>.
+    </li>
+  </ul>
+  </html>"));
   end specificEnthalpy_pTX;
+
   redeclare replaceable function extends specificGibbsEnergy
     "Specific Gibbs energy"
   algorithm
     g := specificEnthalpy(state) - state.T * specificEntropy(state);
   annotation(Inline=true);
   end specificGibbsEnergy;
+
   redeclare replaceable function extends specificHelmholtzEnergy
     "Specific Helmholtz energy"
   algorithm
@@ -720,6 +754,7 @@ enthalpy is independent of the pressure.
       specificEntropy(state);
   annotation(Inline=true);
   end specificHelmholtzEnergy;
+
   redeclare function extends isentropicEnthalpy
     "Return the isentropic enthalpy"
   algorithm
@@ -728,21 +763,22 @@ enthalpy is independent of the pressure.
   annotation(Inline=true,
     Documentation(
       info="<html>
-<p>
-  This function computes the specific enthalpy for an isentropic state change
-  from the temperature that corresponds to the state <code>refState</code> to
-  <code>reference_T</code>.
-</p>
-</html>",
+  <p>
+    This function computes the specific enthalpy for an isentropic state change
+    from the temperature that corresponds to the state <code>refState</code> to
+    <code>reference_T</code>.
+  </p>
+  </html>",
       revisions="<html>
-<ul>
-  <li>
-    December 18, 2013, by Michael Wetter:<br />
-    First implementation.
-  </li>
-</ul>
-</html>"));
+  <ul>
+    <li>
+      December 18, 2013, by Michael Wetter:<br />
+      First implementation.
+    </li>
+  </ul>
+  </html>"));
   end isentropicEnthalpy;
+
   redeclare function extends specificInternalEnergy
     "Specific internal energy"
     extends Modelica.Icons.Function;
@@ -750,6 +786,7 @@ enthalpy is independent of the pressure.
     u := specificEnthalpy(state) - pStp / dStp;
   annotation(Inline=true);
   end specificInternalEnergy;
+
   redeclare function extends temperature
     "Return temperature of ideal gas as a function of the thermodynamic state record"
   algorithm
@@ -758,10 +795,11 @@ enthalpy is independent of the pressure.
     Inline=true,
     Documentation(
       info="<html>
-Temperature is returned from the thermodynamic state record input as a simple
-assignment.
-</html>"));
+  Temperature is returned from the thermodynamic state record input as a simple
+  assignment.
+  </html>"));
   end temperature;
+
   redeclare function extends molarMass
     "Return the molar mass"
   algorithm
@@ -770,17 +808,18 @@ assignment.
     smoothOrder=99,
     Documentation(
       info="<html>
-<p>This function returns the molar mass.</p>
-</html>",
+  <p>This function returns the molar mass.</p>
+  </html>",
       revisions="<html>
-<ul>
-  <li>
-    December 18, 2013, by Michael Wetter:<br />
-    First implementation.
-  </li>
-</ul>
-</html>"));
+  <ul>
+    <li>
+      December 18, 2013, by Michael Wetter:<br />
+      First implementation.
+    </li>
+  </ul>
+  </html>"));
   end molarMass;
+
   redeclare replaceable function temperature_phX
     "Compute temperature from specific enthalpy and mass fraction"
     extends Modelica.Icons.Function;
@@ -796,21 +835,22 @@ assignment.
     inverse(h=specificEnthalpy_pTX(p, T, X)),
     Documentation(
       info="<html>
-Temperature as a function of specific enthalpy and species concentration. The
-pressure is input for compatibility with the medium models, but the
-temperature is independent of the pressure.
-</html>",
+  Temperature as a function of specific enthalpy and species concentration. The
+  pressure is input for compatibility with the medium models, but the
+  temperature is independent of the pressure.
+  </html>",
       revisions="<html>
-<ul>
-  <li>
-    April 30, 2015, by Filip Jorissen and Michael Wetter:<br />
-    Added <code>Inline=true</code> for
-    <a href=\"https://github.com/ibpsa/modelica-ibpsa/issues/227\">
-      issue 227</a>.
-  </li>
-</ul>
-</html>"));
+  <ul>
+    <li>
+      April 30, 2015, by Filip Jorissen and Michael Wetter:<br />
+      Added <code>Inline=true</code> for
+      <a href=\"https://github.com/ibpsa/modelica-ibpsa/issues/227\">
+        issue 227</a>.
+    </li>
+  </ul>
+  </html>"));
   end temperature_phX;
+
   redeclare function extends thermalConductivity
     "Thermal conductivity of dry air as a polynomial in the temperature"
   algorithm
@@ -819,6 +859,7 @@ temperature is independent of the pressure.
       Modelica.Units.Conversions.to_degC(state.T));
   annotation(LateInline=true);
   end thermalConductivity;
+
   //////////////////////////////////////////////////////////////////////
   // Protected classes.
   // These classes are only of use within this medium model.
@@ -827,113 +868,121 @@ temperature is independent of the pressure.
   // medium model with another medium model that does not provide an
   // implementation of these classes.
   protected
-    record GasProperties
-      "Coefficient data record for properties of perfect gases"
-      extends Modelica.Icons.Record;
-      Modelica.Units.SI.MolarMass MM "Molar mass";
-      Modelica.Units.SI.SpecificHeatCapacity R "Gas constant";
-      Modelica.Units.SI.SpecificHeatCapacity cp
-        "Specific heat capacity at constant pressure";
-      Modelica.Units.SI.SpecificHeatCapacity cv = cp - R
-        "Specific heat capacity at constant volume";
-    annotation(preferredView="info",
-      Documentation(
-        info="<html>
-<p>This data record contains the coefficients for perfect gases.</p>
-</html>",
-        revisions="<html>
-<ul>
-  <li>
-    September 12, 2014, by Michael Wetter:<br />
-    Corrected the wrong location of the <code>preferredView</code> and the
-    <code>revisions</code> annotation.
-  </li>
-  <li>
-    November 21, 2013, by Michael Wetter:<br />
-    First implementation.
-  </li>
-</ul>
-</html>"));
-    end GasProperties;
-    constant Modelica.Units.SI.SpecificEnergy h_fg =
-      Buildings.Utilities.Psychrometrics.Constants.h_fg
-      "Latent heat of evaporation of water";
-    constant Modelica.Units.SI.SpecificHeatCapacity cpWatLiq =
-      Buildings.Utilities.Psychrometrics.Constants.cpWatLiq
-      "Specific heat capacity of liquid water";
-    replaceable function der_enthalpyOfLiquid
-      "Temperature derivative of enthalpy of liquid per unit mass of liquid"
-      extends Modelica.Icons.Function;
-      input Temperature T "Temperature";
-      input Real der_T "Temperature derivative";
-      output Real der_h "Derivative of liquid enthalpy";
-    algorithm
-      der_h := cpWatLiq * der_T;
-    annotation(Inline=true);
-    end der_enthalpyOfLiquid;
-    function der_enthalpyOfCondensingGas
-      "Derivative of enthalpy of steam per unit mass of steam"
-      extends Modelica.Icons.Function;
-      input Temperature T "Temperature";
-      input Real der_T "Temperature derivative";
-      output Real der_h "Derivative of steam enthalpy";
-    algorithm
-      der_h := steam.cp * der_T;
-    annotation(Inline=true);
-    end der_enthalpyOfCondensingGas;
-    replaceable function enthalpyOfDryAir
-      "Enthalpy of dry air per unit mass of dry air"
-      extends Modelica.Icons.Function;
-      input Temperature T "Temperature";
-      output SpecificEnthalpy h "Dry air enthalpy";
-    algorithm
-      h := (T - reference_T) * dryair.cp;
-    annotation(smoothOrder=5,
-      Inline=true,
-      derivative=der_enthalpyOfDryAir);
-    end enthalpyOfDryAir;
-    replaceable function der_enthalpyOfDryAir
-      "Derivative of enthalpy of dry air per unit mass of dry air"
-      extends Modelica.Icons.Function;
-      input Temperature T "Temperature";
-      input Real der_T "Temperature derivative";
-      output Real der_h "Derivative of dry air enthalpy";
-    algorithm
-      der_h := dryair.cp * der_T;
-    annotation(Inline=true);
-    end der_enthalpyOfDryAir;
-    replaceable function der_enthalpyOfNonCondensingGas
-      "Derivative of enthalpy of non-condensing gas per unit mass of steam"
-      extends Modelica.Icons.Function;
-      input Temperature T "Temperature";
-      input Real der_T "Temperature derivative";
-      output Real der_h "Derivative of steam enthalpy";
-    algorithm
-      der_h := der_enthalpyOfDryAir(T, der_T);
-    annotation(Inline=true);
-    end der_enthalpyOfNonCondensingGas;
-    replaceable function der_specificHeatCapacityCp
-      "Derivative of specific heat capacity of gas mixture at constant pressure"
-      extends Modelica.Icons.Function;
-      input ThermodynamicState state "Thermodynamic state";
-      input ThermodynamicState der_state "Derivative of thermodynamic state";
-      output Real der_cp(unit="J/(kg.K.s)")
-        "Derivative of specific heat capacity";
-    algorithm
-      der_cp := (steam.cp - dryair.cp) * der_state.X[Water];
-    annotation(Inline=true);
-    end der_specificHeatCapacityCp;
-    replaceable function der_specificHeatCapacityCv
-      "Derivative of specific heat capacity of gas mixture at constant volume"
-      extends Modelica.Icons.Function;
-      input ThermodynamicState state "Thermodynamic state";
-      input ThermodynamicState der_state "Derivative of thermodynamic state";
-      output Real der_cv(unit="J/(kg.K.s)")
-        "Derivative of specific heat capacity";
-    algorithm
-      der_cv := (steam.cv - dryair.cv) * der_state.X[Water];
-    annotation(Inline=true);
-    end der_specificHeatCapacityCv;
+  record GasProperties
+    "Coefficient data record for properties of perfect gases"
+    extends Modelica.Icons.Record;
+    Modelica.Units.SI.MolarMass MM "Molar mass";
+    Modelica.Units.SI.SpecificHeatCapacity R "Gas constant";
+    Modelica.Units.SI.SpecificHeatCapacity cp
+      "Specific heat capacity at constant pressure";
+    Modelica.Units.SI.SpecificHeatCapacity cv = cp - R
+      "Specific heat capacity at constant volume";
+  annotation(preferredView="info",
+    Documentation(
+      info="<html>
+  <p>This data record contains the coefficients for perfect gases.</p>
+  </html>",
+      revisions="<html>
+  <ul>
+    <li>
+      September 12, 2014, by Michael Wetter:<br />
+      Corrected the wrong location of the <code>preferredView</code> and the
+      <code>revisions</code> annotation.
+    </li>
+    <li>
+      November 21, 2013, by Michael Wetter:<br />
+      First implementation.
+    </li>
+  </ul>
+  </html>"));
+  end GasProperties;
+
+  constant Modelica.Units.SI.SpecificEnergy h_fg =
+    Buildings.Utilities.Psychrometrics.Constants.h_fg
+    "Latent heat of evaporation of water";
+  constant Modelica.Units.SI.SpecificHeatCapacity cpWatLiq =
+    Buildings.Utilities.Psychrometrics.Constants.cpWatLiq
+    "Specific heat capacity of liquid water";
+
+  replaceable function der_enthalpyOfLiquid
+    "Temperature derivative of enthalpy of liquid per unit mass of liquid"
+    extends Modelica.Icons.Function;
+    input Temperature T "Temperature";
+    input Real der_T "Temperature derivative";
+    output Real der_h "Derivative of liquid enthalpy";
+  algorithm
+    der_h := cpWatLiq * der_T;
+  annotation(Inline=true);
+  end der_enthalpyOfLiquid;
+
+  function der_enthalpyOfCondensingGas
+    "Derivative of enthalpy of steam per unit mass of steam"
+    extends Modelica.Icons.Function;
+    input Temperature T "Temperature";
+    input Real der_T "Temperature derivative";
+    output Real der_h "Derivative of steam enthalpy";
+  algorithm
+    der_h := steam.cp * der_T;
+  annotation(Inline=true);
+  end der_enthalpyOfCondensingGas;
+
+  replaceable function enthalpyOfDryAir
+    "Enthalpy of dry air per unit mass of dry air"
+    extends Modelica.Icons.Function;
+    input Temperature T "Temperature";
+    output SpecificEnthalpy h "Dry air enthalpy";
+  algorithm
+    h := (T - reference_T) * dryair.cp;
+  annotation(smoothOrder=5,
+    Inline=true,
+    derivative=der_enthalpyOfDryAir);
+  end enthalpyOfDryAir;
+
+  replaceable function der_enthalpyOfDryAir
+    "Derivative of enthalpy of dry air per unit mass of dry air"
+    extends Modelica.Icons.Function;
+    input Temperature T "Temperature";
+    input Real der_T "Temperature derivative";
+    output Real der_h "Derivative of dry air enthalpy";
+  algorithm
+    der_h := dryair.cp * der_T;
+  annotation(Inline=true);
+  end der_enthalpyOfDryAir;
+
+  replaceable function der_enthalpyOfNonCondensingGas
+    "Derivative of enthalpy of non-condensing gas per unit mass of steam"
+    extends Modelica.Icons.Function;
+    input Temperature T "Temperature";
+    input Real der_T "Temperature derivative";
+    output Real der_h "Derivative of steam enthalpy";
+  algorithm
+    der_h := der_enthalpyOfDryAir(T, der_T);
+  annotation(Inline=true);
+  end der_enthalpyOfNonCondensingGas;
+
+  replaceable function der_specificHeatCapacityCp
+    "Derivative of specific heat capacity of gas mixture at constant pressure"
+    extends Modelica.Icons.Function;
+    input ThermodynamicState state "Thermodynamic state";
+    input ThermodynamicState der_state "Derivative of thermodynamic state";
+    output Real der_cp(unit="J/(kg.K.s)")
+      "Derivative of specific heat capacity";
+  algorithm
+    der_cp := (steam.cp - dryair.cp) * der_state.X[Water];
+  annotation(Inline=true);
+  end der_specificHeatCapacityCp;
+
+  replaceable function der_specificHeatCapacityCv
+    "Derivative of specific heat capacity of gas mixture at constant volume"
+    extends Modelica.Icons.Function;
+    input ThermodynamicState state "Thermodynamic state";
+    input ThermodynamicState der_state "Derivative of thermodynamic state";
+    output Real der_cv(unit="J/(kg.K.s)")
+      "Derivative of specific heat capacity";
+  algorithm
+    der_cv := (steam.cv - dryair.cv) * der_state.X[Water];
+  annotation(Inline=true);
+  end der_specificHeatCapacityCv;
 annotation(Documentation(
   info="<html>
 <p>

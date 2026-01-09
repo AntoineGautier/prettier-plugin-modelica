@@ -11,48 +11,49 @@ block TimeTable
     "Output with tabulated values"
     annotation(Placement(transformation(extent={{100,-20},{140,20}})));
   protected
-    final parameter Integer nout = size(table, 2) - 1
-      "Dimension of output vector";
-    final parameter Integer nT = size(table, 1) "Number of time stamps";
-    parameter Real t0(final quantity="Time", final unit="s", fixed=false)
-      "First sample time instant";
-    final parameter Real timeStamps[:](
-      each final quantity="Time",
-      each final unit="s") = timeScale * table[1:end, 1]
+  final parameter Integer nout = size(table, 2) - 1
+    "Dimension of output vector";
+  final parameter Integer nT = size(table, 1) "Number of time stamps";
+  parameter Real t0(final quantity="Time", final unit="s", fixed=false)
+    "First sample time instant";
+  final parameter Real timeStamps[:](
+    each final quantity="Time",
+    each final unit="s") = timeScale * table[1:end, 1]
+    "Time stamps";
+  final parameter Integer val[:, :] =
+    integer(table[1:end, 2:end] + ones(nT, nout) * Constants.small)
+    "Table values as Integer";
+  Integer idx(fixed=false) "Index for table lookup";
+
+  function getIndex
+    "Function to get the index for the table look-up"
+    input Real t(final quantity="Time", final unit="s") "Current time";
+    input Real period(final quantity="Time", final unit="s") "Time period";
+    input Real x[:](each final quantity="Time", each final unit="s")
       "Time stamps";
-    final parameter Integer val[:, :] =
-      integer(table[1:end, 2:end] + ones(nT, nout) * Constants.small)
-      "Table values as Integer";
-    Integer idx(fixed=false) "Index for table lookup";
-    function getIndex
-      "Function to get the index for the table look-up"
-      input Real t(final quantity="Time", final unit="s") "Current time";
-      input Real period(final quantity="Time", final unit="s") "Time period";
-      input Real x[:](each final quantity="Time", each final unit="s")
-        "Time stamps";
-      output Integer k "Index in table";
-      protected
-        Real tS(final quantity="Time", final unit="s")
-          "Time shifted so it is within the period";
-    algorithm
-      tS := mod(t, period);
-      k := -1;
-      for i in size(x, 1):-1:1 loop
-        if tS >= x[i] - 1E-6 then
-          k := i;
-          break;
-        end if;
-      end for;
-    end getIndex;
+    output Integer k "Index in table";
+    protected
+    Real tS(final quantity="Time", final unit="s")
+      "Time shifted so it is within the period";
+  algorithm
+    tS := mod(t, period);
+    k := -1;
+    for i in size(x, 1):-1:1 loop
+      if tS >= x[i] - 1E-6 then
+        k := i;
+        break;
+      end if;
+    end for;
+  end getIndex;
   public
-    parameter Real timeScale(final unit="1") = 1
-      "Time scale of first table column. Set to 3600 if time in table is in hours";
-    parameter Real period(final quantity="Time", final unit="s", min=1E-6)
-      "Periodicity of table";
+  parameter Real timeScale(final unit="1") = 1
+    "Time scale of first table column. Set to 3600 if time in table is in hours";
+  parameter Real period(final quantity="Time", final unit="s", min=1E-6)
+    "Periodicity of table";
   protected
-    final parameter Integer nout = size(table, 2) - 1
-      "Dimension of output vector";
-    final parameter Integer nT = size(table, 1) "Number of time stamps";
+  final parameter Integer nout = size(table, 2) - 1
+    "Dimension of output vector";
+  final parameter Integer nT = size(table, 1) "Number of time stamps";
 initial equation
   t0 = Buildings.Utilities.Math.Functions.round(
     x=integer(time / period) * period,

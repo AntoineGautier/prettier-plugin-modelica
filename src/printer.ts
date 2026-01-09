@@ -450,6 +450,30 @@ function isInsideAnnotation(path: AstPath<ASTNode>): boolean {
 }
 
 /**
+ * Check if we're inside a named_element (class/function definition within element_list)
+ * Used to determine HTML indent trimming behavior:
+ * - Inside named_element: trim 2 spaces (annotations are indented)
+ * - Top-level class annotation: don't trim (annotations start at column 0)
+ */
+function isInsideNamedElement(path: AstPath<ASTNode>): boolean {
+  let depth = 0;
+  try {
+    while (true) {
+      const node = path.getParentNode(depth);
+      if (!node) break;
+      if (node.type === "named_element") return true;
+      // Stop at stored_definition level - we've gone too far
+      if (node.type === "stored_definition") return false;
+      depth++;
+      if (depth > 50) break; // safety limit
+    }
+  } catch {
+    // path.getParentNode can throw if we go too far
+  }
+  return false;
+}
+
+/**
  * Check if we're inside a class_modification (e.g., redeclare inside parentheses).
  * Used to determine if short class definitions should have spaces around = or not.
  * Top-level short class definitions get spaces, but redeclarations inside
@@ -635,6 +659,15 @@ function isCoordinateArray(node: ASTNode): boolean {
   };
 
   return node.children.every((c) => isSimple(c));
+}
+
+/**
+ * Check if a named_element contains a class definition (function, model, package, etc.)
+ * Used to add extra blank lines around class definitions in element_list
+ */
+function isClassDefinitionElement(node: ASTNode): boolean {
+  if (node.type !== "named_element") return false;
+  return node.children.some((child) => child.type === "class_definition");
 }
 
 /**
@@ -831,8 +864,59 @@ export const printModelica: Printer<ASTNode>["print"] = (
       const parts: Doc[] = [];
       let className = "";
 
+      // Helper to check if an element_list ends with a class definition
+      const elementListEndsWithClassDef = (n: ASTNode): boolean => {
+        if (
+          n.type !== "element_list" &&
+          n.type !== "public_element_list" &&
+          n.type !== "protected_element_list"
+        ) {
+          return false;
+        }
+        const lastChild = n.children[n.children.length - 1];
+        return lastChild ? isClassDefinitionElement(lastChild) : false;
+      };
+
+      // Helper to find the start of a comment block before an index
+      const findCommentBlockStart = (targetIndex: number): number => {
+        let firstCommentIndex = -1;
+        for (let j = targetIndex - 1; j >= 0; j--) {
+          const c = node.children[j];
+          if (c.type === "comment" || c.type === "BLOCK_COMMENT") {
+            firstCommentIndex = j;
+          } else {
+            break;
+          }
+        }
+        return firstCommentIndex;
+      };
+
+      // Track which comment indices should have a blank line BEFORE them
+      // (for comments that precede public/protected keywords)
+      const blankLineBeforeComment = new Set<number>();
+
+      // First pass: identify comment blocks that precede public/protected element lists
       for (let i = 0; i < node.children.length; i++) {
         const child = node.children[i];
+        if (
+          child.type === "public_element_list" ||
+          child.type === "protected_element_list"
+        ) {
+          const commentBlockStart = findCommentBlockStart(i);
+          if (commentBlockStart >= 0) {
+            // Check if the element before the comment block is an element_list ending with class def
+            const beforeComment = commentBlockStart > 0 ? node.children[commentBlockStart - 1] : null;
+            if (beforeComment && elementListEndsWithClassDef(beforeComment)) {
+              blankLineBeforeComment.add(commentBlockStart);
+            }
+          }
+        }
+      }
+
+      for (let i = 0; i < node.children.length; i++) {
+        const child = node.children[i];
+        const prevChild = i > 0 ? node.children[i - 1] : null;
+
         if (child.type === "IDENT" && !className) {
           className = child.text ?? "";
           parts.push(className);
@@ -841,12 +925,14 @@ export const printModelica: Printer<ASTNode>["print"] = (
         } else if (child.type === "extends_clause") {
           // extends clause should be on new line with indent
           parts.push(indent([line, path.call(print, "children", i)]));
+        } else if (child.type === "element_list") {
+          parts.push(indent([line, path.call(print, "children", i)]));
         } else if (
-          child.type === "element_list" ||
           child.type === "public_element_list" ||
           child.type === "protected_element_list"
         ) {
-          parts.push(indent([line, path.call(print, "children", i)]));
+          // public/protected already includes hardline before keyword
+          parts.push(indent([path.call(print, "children", i)]));
         } else if (
           child.type === "equation_section" ||
           child.type === "algorithm_section"
@@ -858,8 +944,16 @@ export const printModelica: Printer<ASTNode>["print"] = (
         } else if (child.type === "external_clause") {
           parts.push(hardline, path.call(print, "children", i));
         } else if (child.type === "comment" || child.type === "BLOCK_COMMENT") {
-          // Comments between sections - indent them like other content
-          parts.push(indent([line, path.call(print, "children", i)]));
+          // Comments between sections
+          if (blankLineBeforeComment.has(i)) {
+            // This comment starts a block that precedes public/protected, add blank line before
+            parts.push(hardline, indent([hardline, path.call(print, "children", i)]));
+          } else if (prevChild && elementListEndsWithClassDef(prevChild)) {
+            // Previous was element_list ending with class def, add blank line
+            parts.push(hardline, indent([hardline, path.call(print, "children", i)]));
+          } else {
+            parts.push(indent([line, path.call(print, "children", i)]));
+          }
         }
       }
 
@@ -1001,8 +1095,8 @@ export const printModelica: Printer<ASTNode>["print"] = (
           // Description string on new line with indent
           parts.push(indent([line, path.call(print, "children", i)]));
         } else if (child.type === "annotation_clause") {
-          // Annotation clause on new line with indent
-          parts.push(indent([line, path.call(print, "children", i)]));
+          // Annotation clause on new line, no extra indent (same level as type definition)
+          parts.push(hardline, path.call(print, "children", i));
         }
       }
 
@@ -1042,20 +1136,178 @@ export const printModelica: Printer<ASTNode>["print"] = (
     // ===========================================
     // Element lists
     // ===========================================
-    case "element_list":
-      return join(hardline, path.map(print, "children"));
+    case "element_list": {
+      // Add extra blank line before and after class definitions (named_element containing class_definition)
+      // This improves readability by separating class/function definitions from other elements
+      // When a class definition is preceded by comments, the blank line goes before the comment block
+      const elements = path.map(print, "children");
+      const result: Doc[] = [];
 
-    case "public_element_list":
-      return [
-        "public",
-        indent([line, join(hardline, path.map(print, "children"))]),
-      ];
+      // Helper to find the start of a comment block that precedes a class definition
+      // Returns the index of the first comment in the block, or -1 if no such block
+      const findCommentBlockStart = (classDefIndex: number): number => {
+        let firstCommentIndex = -1;
+        for (let j = classDefIndex - 1; j >= 0; j--) {
+          const c = node.children[j];
+          if (c.type === "comment" || c.type === "BLOCK_COMMENT") {
+            firstCommentIndex = j;
+          } else {
+            break;
+          }
+        }
+        return firstCommentIndex;
+      };
 
-    case "protected_element_list":
-      return [
-        "protected",
-        indent([line, join(hardline, path.map(print, "children"))]),
-      ];
+      // Track which indices should have a blank line BEFORE them
+      const blankLineBefore = new Set<number>();
+
+      // First pass: identify where blank lines should go
+      for (let i = 0; i < node.children.length; i++) {
+        const child = node.children[i];
+        const isClassDef = isClassDefinitionElement(child);
+        const prevChild = i > 0 ? node.children[i - 1] : null;
+        const prevIsClassDef = prevChild ? isClassDefinitionElement(prevChild) : false;
+
+        if (isClassDef && i > 0) {
+          // Check if there's a comment block before this class definition
+          const commentBlockStart = findCommentBlockStart(i);
+          if (commentBlockStart > 0) {
+            // Add blank line before the comment block (not before the class def)
+            blankLineBefore.add(commentBlockStart);
+          } else if (commentBlockStart === 0) {
+            // Comment block starts at index 0, no blank line needed before it
+          } else {
+            // No comment block, add blank line before the class def itself
+            blankLineBefore.add(i);
+          }
+        } else if (prevIsClassDef && i > 0) {
+          // After a class definition, add blank line before current element
+          blankLineBefore.add(i);
+        }
+      }
+
+      // Second pass: build the result with appropriate blank lines
+      for (let i = 0; i < elements.length; i++) {
+        if (i > 0) {
+          if (blankLineBefore.has(i)) {
+            result.push(hardline, hardline);
+          } else {
+            result.push(hardline);
+          }
+        }
+        result.push(elements[i]);
+      }
+
+      return result;
+    }
+
+    case "public_element_list": {
+      // Same logic as element_list: add blank lines around class definitions
+      // No extra indent - elements are at the same level, just prefixed with "public" keyword
+      const elements = path.map(print, "children");
+      const result: Doc[] = [];
+
+      // Helper to find the start of a comment block that precedes a class definition
+      const findCommentBlockStart = (classDefIndex: number): number => {
+        let firstCommentIndex = -1;
+        for (let j = classDefIndex - 1; j >= 0; j--) {
+          const c = node.children[j];
+          if (c.type === "comment" || c.type === "BLOCK_COMMENT") {
+            firstCommentIndex = j;
+          } else {
+            break;
+          }
+        }
+        return firstCommentIndex;
+      };
+
+      const blankLineBefore = new Set<number>();
+
+      for (let i = 0; i < node.children.length; i++) {
+        const child = node.children[i];
+        const isClassDef = isClassDefinitionElement(child);
+        const prevChild = i > 0 ? node.children[i - 1] : null;
+        const prevIsClassDef = prevChild ? isClassDefinitionElement(prevChild) : false;
+
+        if (isClassDef && i > 0) {
+          const commentBlockStart = findCommentBlockStart(i);
+          if (commentBlockStart > 0) {
+            blankLineBefore.add(commentBlockStart);
+          } else if (commentBlockStart === -1) {
+            blankLineBefore.add(i);
+          }
+        } else if (prevIsClassDef && i > 0) {
+          blankLineBefore.add(i);
+        }
+      }
+
+      for (let i = 0; i < elements.length; i++) {
+        if (i > 0) {
+          if (blankLineBefore.has(i)) {
+            result.push(hardline, hardline);
+          } else {
+            result.push(hardline);
+          }
+        }
+        result.push(elements[i]);
+      }
+
+      return [hardline, "public", hardline, result];
+    }
+
+    case "protected_element_list": {
+      // Same logic as element_list: add blank lines around class definitions
+      // No extra indent - elements are at the same level, just prefixed with "protected" keyword
+      const elements = path.map(print, "children");
+      const result: Doc[] = [];
+
+      // Helper to find the start of a comment block that precedes a class definition
+      const findCommentBlockStart = (classDefIndex: number): number => {
+        let firstCommentIndex = -1;
+        for (let j = classDefIndex - 1; j >= 0; j--) {
+          const c = node.children[j];
+          if (c.type === "comment" || c.type === "BLOCK_COMMENT") {
+            firstCommentIndex = j;
+          } else {
+            break;
+          }
+        }
+        return firstCommentIndex;
+      };
+
+      const blankLineBefore = new Set<number>();
+
+      for (let i = 0; i < node.children.length; i++) {
+        const child = node.children[i];
+        const isClassDef = isClassDefinitionElement(child);
+        const prevChild = i > 0 ? node.children[i - 1] : null;
+        const prevIsClassDef = prevChild ? isClassDefinitionElement(prevChild) : false;
+
+        if (isClassDef && i > 0) {
+          const commentBlockStart = findCommentBlockStart(i);
+          if (commentBlockStart > 0) {
+            blankLineBefore.add(commentBlockStart);
+          } else if (commentBlockStart === -1) {
+            blankLineBefore.add(i);
+          }
+        } else if (prevIsClassDef && i > 0) {
+          blankLineBefore.add(i);
+        }
+      }
+
+      for (let i = 0; i < elements.length; i++) {
+        if (i > 0) {
+          if (blankLineBefore.has(i)) {
+            result.push(hardline, hardline);
+          } else {
+            result.push(hardline);
+          }
+        }
+        result.push(elements[i]);
+      }
+
+      return [hardline, "protected", hardline, result];
+    }
 
     // ===========================================
     // Elements
@@ -3465,6 +3717,11 @@ export function embedHTML(path: AstPath<ASTNode>, _options: any) {
     return null;
   }
 
+  // Check if we're inside a named_element (nested annotation) vs top-level class annotation
+  // - Top-level class annotation: trim the 2-space indent (starts at column 0)
+  // - Nested annotation in named_element: keep the 2-space indent (already indented)
+  const insideNamedElement = isInsideNamedElement(path);
+
   // Extract string content (remove outer quotes)
   const match = text.match(/^"(.*)"$/s);
   if (!match) {
@@ -3498,9 +3755,11 @@ export function embedHTML(path: AstPath<ASTNode>, _options: any) {
       });
 
       // Step 3: Post-process (restore preserved blocks, re-escape quotes)
+      // Trim indent only for top-level annotations (NOT inside named_element)
       const finalHtml = postProcessHTMLFromPrettier(
         formattedHtml,
         preservedBlocks,
+        !insideNamedElement,
       );
 
       // Step 4: Return as a Doc (string wrapped in quotes)

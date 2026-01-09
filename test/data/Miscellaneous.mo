@@ -33,6 +33,7 @@ model Miscellaneous
     redeclare final Buildings.Fluid.Chillers.ModularReversible.BaseClasses.RefrigerantCycleHeatRecovery refCyc(
       redeclare final model RefrigerantCycleChillerCooling=
         RefrigerantCycleChillerCooling));
+
   final model RefrigerantCycleChillerCooling =
     Buildings.Fluid.Chillers.ModularReversible.RefrigerantCycle.TableData2DLoadDep(
       final useInChi=true,
@@ -47,6 +48,7 @@ model Miscellaneous
     "Refrigerant cycle module for the cooling mode"
     annotation(choicesAllMatching=true,
       Placement(transformation(extent={{114,-18},{130,-2}})));
+
   Buildings.Templates.Plants.Controls.Utilities.PlaceholderInteger phReqPlaHeaWatAirHan(
     each final max=1,
     each final min=0,

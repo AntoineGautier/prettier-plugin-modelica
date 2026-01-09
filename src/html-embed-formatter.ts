@@ -38,16 +38,21 @@ export function prepareHTMLForPrettier(
 /**
  * Post-process HTML after Prettier formatting
  * Removes base indent, re-escapes quotes and restores preserved blocks
+ * @param html - The formatted HTML string
+ * @param preservedBlocks - Blocks that were preserved during formatting
+ * @param trimIndent - Whether to trim the 2-space base indent (true for top-level, false for nested in named_element)
  */
 export function postProcessHTMLFromPrettier(
   html: string,
   preservedBlocks: PreservedBlock[],
+  trimIndent: boolean = true,
 ): string {
-  // 1. Remove Prettier's 2-space base indent from each line
-  const trimmedIndent = trimBaseIndent(html);
+  // 1. Remove Prettier's 2-space base indent from each line (only for top-level annotations)
+  const trimmedIndent = trimIndent ? trimBaseIndent(html) : html;
 
   // 2. Move closing </html> to end of previous line (keep it attached to quote)
-  const htmlFixed = attachClosingHtmlTag(trimmedIndent);
+  // Only strip indent before </html> for top-level annotations
+  const htmlFixed = attachClosingHtmlTag(trimmedIndent, trimIndent);
 
   // 3. Re-escape quotes
   const reescaped = reescapeQuotes(htmlFixed);
@@ -61,14 +66,19 @@ export function postProcessHTMLFromPrettier(
 }
 
 /**
- * Move closing </html> tag to the end of the previous line.
- * Prettier puts </html> on its own line, but in Modelica documentation strings
- * we want it attached to the quote: </html>"
+ * Normalize closing </html> tag.
+ * Prettier puts </html> on its own line with varying indent.
+ * @param html - The HTML string
+ * @param stripIndent - Whether to strip indent before </html> (true for top-level, false for nested)
  */
-function attachClosingHtmlTag(html: string): string {
-  // Match a newline followed by optional whitespace and </html> at the end
-  // Replace with just </html> (removing the newline and whitespace before it)
-  return html.replace(/\n\s*<\/html>\s*$/i, "\n</html>");
+function attachClosingHtmlTag(html: string, stripIndent: boolean = true): string {
+  if (stripIndent) {
+    // For top-level: remove indent before </html>
+    return html.replace(/\n\s*<\/html>\s*$/i, "\n</html>");
+  } else {
+    // For nested: ensure </html> has consistent 2-space indent
+    return html.replace(/\n\s*<\/html>\s*$/i, "\n  </html>");
+  }
 }
 
 /**

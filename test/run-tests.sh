@@ -72,6 +72,7 @@ for file in "$TEST_DIR"/*.mo; do
 
             prev_indent=$current_indent
         done < "$TEST_DIR/$filename"
+        echo "✓ No excessive indentation detected."
     fi
 done
 

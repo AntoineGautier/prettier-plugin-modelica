@@ -149,7 +149,9 @@ equation
   // From TwoWayPressureIndependent valve model
   m_flow_set = m_flow_nominal * phi;
   dp_min = Buildings.Fluid.BaseClasses.FlowModels.basicFlowFunction_m_flow(
-    m_flow=m_flow_set, k=kTotMax, m_flow_turbulent=m_flow_turbulent);
+    m_flow=m_flow_set,
+    k=kTotMax,
+    m_flow_turbulent=m_flow_turbulent);
   if from_dp then
     dp_x = dp - dp_min;
     dp_x1 = -dp_x2;

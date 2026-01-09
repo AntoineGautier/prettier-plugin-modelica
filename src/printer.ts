@@ -3396,15 +3396,28 @@ export const printModelica: Printer<ASTNode>["print"] = (
       //
       // The inner conditionalGroup is evaluated AFTER the softline break decision,
       // so it measures from the indented position, not from the function name.
-      const argsInline = join(", ", allArgs);
-      const argsBroken = join([",", hardline], allArgs);
-      const argsDoc = conditionalGroup([argsInline, argsBroken]);
+      //
+      // Indentation logic:
+      // - If in continuation context (e.g., inside if-then value), parent already provides indent
+      //   so we skip adding indent here to avoid double indent
+      // - If NOT in continuation context (e.g., operand of binary_expression), we add indent
+      //   because no parent provides it
+      //
+      // Two-option formatting for function args using conditionalGroup:
+      // 1. All inline: func(a, b, c) - everything fits on one line
+      // 2. Each arg on its own line: func(\n  a,\n  b,\n  c) - doesn't fit
+      //
+      // conditionalGroup tries each option in order and picks the first that fits.
+      const argsInline = ["(", join(", ", allArgs), ")"];
 
-      // If already in continuation context, don't add extra indent
       if (inContinuation) {
-        return group(["(", softline, argsDoc, ")"]);
+        // Parent provides indent - broken args don't need additional indent
+        const argsBroken = group(["(", softline, join([",", line], allArgs), ")"], { shouldBreak: true });
+        return conditionalGroup([argsInline, argsBroken]);
       }
-      return group(["(", indent([softline, argsDoc]), ")"]);
+      // No parent indent - add our own for broken case
+      const argsBroken = group(["(", indent([softline, join([",", line], allArgs)]), ")"], { shouldBreak: true });
+      return conditionalGroup([argsInline, argsBroken]);
     }
 
     case "function_arguments": {

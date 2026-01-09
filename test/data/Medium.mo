@@ -675,7 +675,9 @@ as required from medium model \"Buildings.Media.Air\".");
     state := if size(X, 1) == nX
     then ThermodynamicState(p=p, T=temperature_phX(p, h, X), X=X)
     else ThermodynamicState(
-      p=p, T=temperature_phX(p, h, X), X=cat(1, X, {1 - sum(X)}));
+      p=p,
+      T=temperature_phX(p, h, X),
+      X=cat(1, X, {1 - sum(X)}));
   annotation(smoothOrder=2,
     Inline=true,
     Documentation(

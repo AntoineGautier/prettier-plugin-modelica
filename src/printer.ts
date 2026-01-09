@@ -1028,8 +1028,8 @@ export const printModelica: Printer<ASTNode>["print"] = (
       return printChildrenWithSpaces(path, print);
 
     case "extends_class_specifier": {
-      // Format: extends IDENT [description_string] [element_list] [algorithm_section] [annotation_clause] ; end IDENT ;
-      // Used for "redeclare function extends FunctionName ..."
+      // Format: extends IDENT [class_modification] [description_string] [element_list] [algorithm_section] [annotation_clause] ; end IDENT ;
+      // Used for "redeclare function extends FunctionName ..." or "redeclare model extends BaseProperties(...)"
       // Note: Semicolons are filtered out during parsing (see INCLUDED_ANONYMOUS_TOKENS),
       // so we need to add them manually:
       // - Semicolon after annotation_clause (before end)
@@ -1047,6 +1047,9 @@ export const printModelica: Printer<ASTNode>["print"] = (
           parts.push(className);
         } else if (child.type === "IDENT") {
           // Second IDENT is at the end after 'end' keyword - skip it, we'll add it manually
+        } else if (child.type === "class_modification") {
+          // Class modification follows immediately after IDENT (no space)
+          parts.push(path.call(print, "children", i));
         } else if (child.type === "description_string") {
           parts.push(indent([line, path.call(print, "children", i)]));
         } else if (child.type === "element_list") {

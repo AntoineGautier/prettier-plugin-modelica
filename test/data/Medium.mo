@@ -48,6 +48,20 @@ package Air
     "ThermodynamicState record for moist air"
   end ThermodynamicState;
 
+  redeclare replaceable model extends BaseProperties(
+    preferredMediumStates=true,
+    final standardOrderComponents=true)
+    "Base properties (p, d, T, h, u, R, MM) of water"
+  equation
+    MM = steam.MM;
+    h = specificEnthalpy(state);
+    d = density(state);
+    u = h - p / d;
+    R_s = steam.R;
+    state.p = p;
+    state.T = T;
+  end BaseProperties;
+
   // There must not be any stateSelect=StateSelect.prefer for
   // the pressure.
   // Otherwise, translateModel("Buildings.Fluid.FMI.ExportContainers.Examples.FMUs.ResistanceVolume")

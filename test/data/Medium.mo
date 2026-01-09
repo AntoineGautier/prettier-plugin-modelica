@@ -44,7 +44,10 @@ package Air
   // Redeclare ThermodynamicState to avoid the warning
   // "Base class ThermodynamicState is replaceable"
   // during model check
-  redeclare record extends ThermodynamicState
+  redeclare record extends ThermodynamicState(
+    p(start=p_default),
+    T(start=T_default),
+    X(start=X_default))
     "ThermodynamicState record for moist air"
   end ThermodynamicState;
 
@@ -61,6 +64,40 @@ package Air
     state.p = p;
     state.T = T;
   end BaseProperties;
+
+  replaceable function density_TX_a
+    "Evaluate density of antifreeze-water mixture"
+    extends Modelica.Icons.Function;
+    input Modelica.Units.SI.Temperature T
+      "Temperature of antifreeze-water mixture";
+    input Modelica.Units.SI.MassFraction X_a "Mass fraction of antifreeze";
+    output Modelica.Units.SI.Density d "Density of antifreeze-water mixture";
+  algorithm
+    d := polynomialProperty(X_a, T, proCoe.a_d)
+      annotation(Documentation(
+        info="<html>
+  <p>
+    Density of propylene antifreeze-water mixture at specified mass fraction and
+    temperature, based on Melinder (2010).
+  </p>
+  <h4>References</h4>
+  <p>
+    Melinder, &#197;ke. 2010. Properties of Secondary Working Fluids (Secondary
+    Refrigerants or Coolants, Heat Transfer Fluids) for Indirect Systems. Paris:
+    IIR/IIF.
+  </p>
+  </html>",
+        revisions="<html>
+  <ul>
+    <li>
+      May 2, 2018 by Massimo Cimmino:<br />
+      First implementation. This function is used by
+      <a href=\"modelica://Buildings.Media.Antifreeze.EthyleneGlycolWater\">
+        Buildings.Media.Antifreeze.EthyleneGlycolWater</a>.
+    </li>
+  </ul>
+  </html>"));
+  end density_TX_a;
 
   // There must not be any stateSelect=StateSelect.prefer for
   // the pressure.

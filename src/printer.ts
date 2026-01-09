@@ -2317,6 +2317,9 @@ export const printModelica: Printer<ASTNode>["print"] = (
           parts.push(path.call(print, "children", i));
         } else if (child.type === "comment") {
           parts.push(" ", path.call(print, "children", i));
+        } else if (child.type === "annotation_clause") {
+          // Annotation on statement - add on new line with indent
+          parts.push(indent([hardline, path.call(print, "children", i)]));
         }
       }
       parts.push(";");

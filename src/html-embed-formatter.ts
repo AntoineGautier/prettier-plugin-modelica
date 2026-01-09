@@ -154,15 +154,16 @@ function trimBaseIndent(html: string): string {
 
 /**
  * Generate a placeholder of exact same length as the match, preserving newlines.
- * Uses __PSBL as the root marker, padded with underscores to match length.
+ * Uses PSBL as the root marker with different start (___) and end (###) markers.
+ * This ensures placeholders are unambiguous even when contiguous or separated by newlines.
  * For short matches, may slightly exceed the match length to fit the marker.
- * The prefix __PSBL{index}_ is always kept intact (never split by newlines).
+ * The prefix ___PSBL{index}_ is always kept intact (never split by newlines).
  */
 function generatePlaceholder(match: string, blockIndex: number): string {
   const targetLength = match.length;
   const indexStr = blockIndex.toString();
-  const prefix = `__PSBL${indexStr}_`;
-  const suffix = "__";
+  const prefix = `___PSBL${indexStr}_`;
+  const suffix = "###";
   const minLength = prefix.length + suffix.length;
 
   // Count newlines and their positions in the original match
@@ -256,13 +257,14 @@ function restorePreservedBlocks(
   let result = html;
   for (const block of preservedBlocks) {
     // Extract the index from the placeholder to build a flexible regex
-    // Placeholder format: __PSBL{index}_ followed by underscores and ending with __
-    const indexMatch = block.placeholder.match(/__PSBL(\d+)_/);
+    // Placeholder format: ___PSBL{index}_ followed by underscores/newlines and ending with ###
+    const indexMatch = block.placeholder.match(/___PSBL(\d+)_/);
     if (indexMatch) {
       const index = indexMatch[1];
-      // Match __PSBL{index}_ followed by any underscores/whitespace, ending with __
-      // Allow whitespace (including newlines) to be interspersed
-      const pattern = new RegExp(`__PSBL${index}_[_\\s]*__`, "g");
+      // Match ___PSBL{index}_ followed by underscores/whitespace, ending with ###
+      // The ### suffix is unique and won't be confused with the ___ prefix of another placeholder
+      // Include \s to handle cases where Prettier replaces newlines with spaces
+      const pattern = new RegExp(`___PSBL${index}_[_\\s]*###`, "g");
       result = result.replace(pattern, block.content);
     } else {
       // Fallback to exact match

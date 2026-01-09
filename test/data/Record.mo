@@ -23,5 +23,10 @@ record Carrier_50PSW180_52kW_4_50COP_R410A =
     March 6, 2017, by Massimo Cimmino:<br />
     Calibrated parameters.
   </li>
+  <li>
+    February 3, 2012, by Michael Wetter:<br />
+    Made assignment of <code>m_flow_small</code> <code>final</code> as it is
+    no longer used in the base class.
+  </li>
 </ul>
 </html>"));

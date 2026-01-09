@@ -78,6 +78,40 @@ initial equation
       ": Last time stamp in table must be smaller than period.");
   idx = getIndex(time, period, timeStamps);
   y[:] = val[idx, :];
+  if CvData == Buildings.Fluid.Types.CvTypes.OpPoint then
+    Kv_SI = m_flow_nominal / sqrt(dpValve_nominal);
+    Kv = Kv_SI / (rhoStd / 3600 / sqrt(1E5));
+    Cv = Kv_SI / (rhoStd * 0.0631 / 1000 / sqrt(6895));
+    Av = Kv_SI / sqrt(rhoStd);
+  elseif CvData == Buildings.Fluid.Types.CvTypes.Kv then
+    Kv_SI = Kv * rhoStd / 3600 / sqrt(1E5)
+      "Unit conversion m3/(h*sqrt(bar)) to kg/(s*sqrt(Pa))";
+    Cv = Kv_SI / (rhoStd * 0.0631 / 1000 / sqrt(6895));
+    Av = Kv_SI / sqrt(rhoStd);
+    dpValve_nominal = (m_flow_nominal / Kv_SI) ^ 2;
+  else
+    assert(
+      CvData == Buildings.Fluid.Types.CvTypes.Av,
+      "Invalid value for CvData.
+Obtained CvData = " + String(CvData) + ".");
+    Kv_SI = Av * sqrt(rhoStd);
+    Kv = Kv_SI / (rhoStd / 3600 / sqrt(1E5));
+    Cv = Kv_SI / (rhoStd * 0.0631 / 1000 / sqrt(6895));
+    dpValve_nominal = (m_flow_nominal / Kv_SI) ^ 2;
+  end if;
+algorithm
+  if y < yL then
+    yC := max(0, y);
+    kThetaSqRt := sqrt(Modelica.Math.exp(cL[3] + yC * (cL[2] + yC * cL[1])))
+      "y=0 is closed";
+  else
+    if (y > yU) then
+      yC := min(1, y);
+      kThetaSqRt := sqrt(Modelica.Math.exp(cU[3] + yC * (cU[2] + yC * cU[1])));
+    else
+      kThetaSqRt := sqrt(Modelica.Math.exp(a + b * (1 - y))) "y=0 is closed";
+    end if;
+  end if;
 equation
   when {sample(t0 + timeStamps[i], period) for i in 1:nT} then
     idx = getIndex(time, period, timeStamps);

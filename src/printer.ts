@@ -1959,6 +1959,11 @@ export const printModelica: Printer<ASTNode>["print"] = (
             child.type === "expression"
           ) {
             result.push(path.call(print, "children", i));
+          } else if (child.type === "description_string") {
+            // Description string after expression (e.g., `x = value "description";`)
+            result.push(
+              formatTrailingDescription(path.call(print, "children", i)),
+            );
           } else if (child.type === "comment") {
             result.push(" ", path.call(print, "children", i));
           }
@@ -1973,6 +1978,11 @@ export const printModelica: Printer<ASTNode>["print"] = (
         const child = node.children[i];
         if (child.type === "simple_expression" || child.type === "expression") {
           parts.push(path.call(print, "children", i));
+        } else if (child.type === "description_string") {
+          // Description string after expression
+          parts.push(
+            formatTrailingDescription(path.call(print, "children", i)),
+          );
         } else if (child.type === "comment") {
           parts.push(" ", path.call(print, "children", i));
         }
@@ -2315,6 +2325,12 @@ export const printModelica: Printer<ASTNode>["print"] = (
             parts.push(" := ");
           }
           parts.push(path.call(print, "children", i));
+        } else if (child.type === "description_string") {
+          // Description string after expression (e.g., `x := value "description";`)
+          // Use formatTrailingDescription to break to new line with indent if too long
+          parts.push(
+            formatTrailingDescription(path.call(print, "children", i)),
+          );
         } else if (child.type === "comment") {
           parts.push(" ", path.call(print, "children", i));
         } else if (child.type === "annotation_clause") {

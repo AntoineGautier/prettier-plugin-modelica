@@ -504,13 +504,17 @@ export function printBinaryExpression(
           const option3: Doc = inContinuation
             ? [" ", ops[i], group([line, operand])]
             : [" ", ops[i], indent(group([line, operand]))];
+          // For option 2: parenthesized_expression with if_expression needs indent wrapper
+          // BUT only if the binary expression itself is NOT in continuation context
+          // If binary expression is already in continuation context (e.g., inside another paren),
+          // the parent already provides indent, so don't add another
           const option2Operand =
             operandNode.type === "parenthesized_expression" &&
-            !(
-              parenContainsIfExpression(operandNode) &&
-              isInsideIfExpressionValue(path)
-            )
+            !inContinuation &&
+            parenContainsIfExpression(operandNode)
               ? indent(group(operand, { shouldBreak: true }))
+              : operandNode.type === "function_application"
+              ? group(operand, { shouldBreak: true })
               : group(operand, { shouldBreak: true });
           exprParts.push(
             conditionalGroup([

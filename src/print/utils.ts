@@ -27,6 +27,7 @@ export const {
   join,
   fill,
   conditionalGroup,
+  ifBreak,
 } = builders;
 
 // ===========================================

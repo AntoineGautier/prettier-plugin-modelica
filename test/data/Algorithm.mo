@@ -56,8 +56,7 @@ block TimeTable
   final parameter Integer nT = size(table, 1) "Number of time stamps";
 initial equation
   t0 = Buildings.Utilities.Math.Functions.round(
-    x=integer(time / period) * period,
-    n=6);
+    x=integer(time / period) * period, n=6);
   assert(nT > 0, "No table values defined.");
   // Check that all values in the second column are Integer values
   for i in 1:nT loop
@@ -102,15 +101,7 @@ initial equation
 algorithm
   // Internal thermal resistances
   (RDelta, R) := Buildings.Fluid.Geothermal.Borefields.BaseClasses.Boreholes.BaseClasses.Functions.multipoleThermalResistances(
-    2,
-    3,
-    xPip,
-    yPip,
-    rBor,
-    rPip,
-    kFil,
-    kSoi,
-    RFluPip);
+    2, 3, xPip, yPip, rBor, rPip, kFil, kSoi, RFluPip);
   if y < yL then
     yC := max(0, y);
     kThetaSqRt := sqrt(Modelica.Math.exp(cL[3] + yC * (cL[2] + yC * cL[1])))

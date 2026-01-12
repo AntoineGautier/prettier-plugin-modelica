@@ -14,6 +14,7 @@ import {
   join,
   fill,
   conditionalGroup,
+  ifBreak,
   isInsideAnnotation,
   isGraphicalPrimitive,
   isFirstLevelAnnotationAttribute,
@@ -192,20 +193,99 @@ export function printFunctionCallArgs(
     return group(["(", indent([softline, allArgs[0]]), ")"]);
   }
 
-  const argsInline = ["(", join(", ", allArgs), ")"];
+  // Multiple arguments - three formatting options using nested ifBreak:
+  // 1. All inline: func(a, b, c) - everything fits on one line
+  // 2. Break after '(', args inline: func(\n  a, b, c) - outer breaks, inner doesn't
+  // 3. Each arg on own line: func(\n  a,\n  b,\n  c) - both outer and inner break
+  //
+  // Nested ifBreak structure (like Prettier JS):
+  // - Outer ifBreak: decides whether function call breaks at all
+  // - Inner ifBreak: if outer broke, decides whether args inline or separate lines
+  //
+  // Check if we're inside a binary expression by walking up the tree
+  // Don't stop at function_call_args - we need to find binary expressions further up
+  // Binary expressions add indent for continuation lines, so operands need indent
+  let insideBinaryExpression = false;
+  for (let i = 1; i < 15; i++) {
+    const ancestor = path.getParentNode(i);
+    if (!ancestor) break;
+    if (ancestor.type === "binary_expression") {
+      insideBinaryExpression = true;
+      break;
+    }
+    // Stop at boundaries that reset context (but not function_call_args)
+    // Note: Don't stop at "declaration" because binary expressions inside
+    // declarations (like parameter assignments) need to be detected
+    if (ancestor.type === "if_expression" ||
+        ancestor.type === "named_argument" ||
+        ancestor.type === "equation" ||
+        ancestor.type === "statement") {
+      break;
+    }
+  }
+
+  // In continuation context OR inside binary expression, handle specially
+  // Binary expressions only wrap continuation lines in indent, so we need to add indent for args
+  // But if-expressions wrap the entire value in indent, so we don't need to add indent
+  if (insideBinaryExpression) {
+    // Inside binary expression: function call must provide its own indent
+    // Binary expression option 2 sets shouldBreak but doesn't add indent
+    // Use conditionalGroup to try three explicit formatting options
+    // Option 1: All inline - func(a, b, c)
+    // Option 2: Break after '(', args inline - func(\n  a, b, c)
+    // Option 3: Break after '(', each arg on line - func(\n  a,\n  b,\n  c)
+    return conditionalGroup([
+      // Option 1: all inline
+      ["(", join(", ", allArgs), ")"],
+      // Option 2: break with indent, args inline
+      ["(", indent([line, join(", ", allArgs)]), ")"],
+      // Option 3: break with indent, each arg on own line
+      ["(", indent([line, join([",", line], allArgs)]), ")"],
+    ]);
+  }
 
   if (inContinuation) {
-    const argsBroken = group(
-      ["(", softline, join([",", line], allArgs), ")"],
-      { shouldBreak: true },
-    );
-    return conditionalGroup([argsInline, argsBroken]);
+    // Already in continuation context - no additional indent
+    return group([
+      "(",
+      ifBreak(
+        [
+          line,
+          group(
+            ifBreak(
+              join([",", line], allArgs),  // inner breaks: each arg on line
+              join(", ", allArgs)           // inner doesn't break: args inline
+            )
+          )
+        ],
+        // When outer doesn't break - everything inline
+        join(", ", allArgs)
+      ),
+      ")"
+    ]);
   }
-  const argsBroken = group(
-    ["(", indent([softline, join([",", line], allArgs)]), ")"],
-    { shouldBreak: true },
-  );
-  return conditionalGroup([argsInline, argsBroken]);
+
+  // Not in continuation context - wrap entire content in indent
+  return group([
+    "(",
+    indent([
+      ifBreak(
+        // When outer breaks - line and inner ifBreak for args
+        [
+          line,
+          group(
+            ifBreak(
+              join([",", line], allArgs),  // inner breaks: each arg on line
+              join(", ", allArgs)           // inner doesn't break: args inline
+            )
+          )
+        ],
+        // When outer doesn't break - softline and inline args
+        [softline, join(", ", allArgs)]
+      )
+    ]),
+    ")"
+  ]);
 }
 
 /**

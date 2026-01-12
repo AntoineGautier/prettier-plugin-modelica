@@ -66,7 +66,7 @@ model Miscellaneous
     eps_nominal * min(
       {mLiq_flow_nominal * cpLiq_nominal,
         mAir_flow_nominal * cpTestAirChg_nominal}) * (TLiqEntChg_nominal -
-        TAirEntChg_nominal);
+      TAirEntChg_nominal);
   final parameter Modelica.Units.SI.HeatFlowRate Q_flow_nominal =
     (MediumLiq.specificEnthalpy_pTX(
       MediumLiq.p_default,

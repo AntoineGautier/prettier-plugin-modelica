@@ -32,7 +32,7 @@ block IfThenElse
       m_flow_nominal=hp.mHeaWatHp_flow_nominal,
       dp_nominal=hp.dpHeaWatHp_nominal + max(valIso.dpValveHeaWat_nominal) *
         ((if have_valHpInlIso then 1 else 0) + (if have_valHpOutIso
-          then 1 else 0)) + dpValCheHeaWat_nominal,
+        then 1 else 0)) + dpValCheHeaWat_nominal,
       datPum=dat.pumHeaWatPriSin[1])
     elseif not is_dpBalYPumSetCal or is_dpBalYPumSetCal
     then Buildings.Templates.Utilities.computeBalancingPressureDrop(
@@ -53,7 +53,7 @@ block IfThenElse
       m_flow_nominal=hp.mChiWatHp_flow_nominal,
       dp_nominal=hp.dpChiWatHp_nominal + max(
         valIso.dpValveChiWadcdcscsccscezt_nominal) * ((if have_valHpInlIso
-          then 1 else 0) + (if have_valHpOutIso then 1 else 0)) +
+        then 1 else 0) + (if have_valHpOutIso then 1 else 0)) +
         dpValCheChiWat_nominal,
       datPum=if cfg.typPumChiWatPri ==
         Buildings.Templates.Plants.HeatPumps.Types.PumpsPrimary.Constant
@@ -149,9 +149,7 @@ equation
   // From TwoWayPressureIndependent valve model
   m_flow_set = m_flow_nominal * phi;
   dp_min = Buildings.Fluid.BaseClasses.FlowModels.basicFlowFunction_m_flow(
-    m_flow=m_flow_set,
-    k=kTotMax,
-    m_flow_turbulent=m_flow_turbulent);
+    m_flow=m_flow_set, k=kTotMax, m_flow_turbulent=m_flow_turbulent);
   if from_dp then
     dp_x = dp - dp_min;
     dp_x1 = -dp_x2;

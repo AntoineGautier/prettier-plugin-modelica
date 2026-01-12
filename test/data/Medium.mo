@@ -349,7 +349,7 @@ as required from medium model \"Buildings.Media.Air\".");
     "Enthalpy of gas mixture per unit mass of gas mixture"
   algorithm
     h := enthalpyOfCondensingGas(T) * X[Water] + enthalpyOfDryAir(T) * (1.0 -
-        X[Water]);
+      X[Water]);
   annotation(Inline=true);
   end enthalpyOfGas;
 
@@ -675,9 +675,7 @@ as required from medium model \"Buildings.Media.Air\".");
     state := if size(X, 1) == nX
     then ThermodynamicState(p=p, T=temperature_phX(p, h, X), X=X)
     else ThermodynamicState(
-      p=p,
-      T=temperature_phX(p, h, X),
-      X=cat(1, X, {1 - sum(X)}));
+      p=p, T=temperature_phX(p, h, X), X=cat(1, X, {1 - sum(X)}));
   annotation(smoothOrder=2,
     Inline=true,
     Documentation(
@@ -880,7 +878,7 @@ as required from medium model \"Buildings.Media.Air\".");
     output Temperature T "temperature";
   algorithm
     T := reference_T + (h - h_fg * X[Water]) / ((1 - X[Water]) * dryair.cp +
-        X[Water] * steam.cp);
+      X[Water] * steam.cp);
   annotation(smoothOrder=5,
     Inline=true,
     inverse(h=specificEnthalpy_pTX(p, T, X)),

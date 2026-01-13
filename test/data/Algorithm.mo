@@ -99,6 +99,8 @@ initial equation
     dpValve_nominal = (m_flow_nominal / Kv_SI) ^ 2;
   end if;
 algorithm
+  (, labels, cluSiz) := Buildings.Utilities.Clustering.KMeans(
+    TBor, N, nBor, 1, n_cluster_size=nClu);
   // Internal thermal resistances
   (RDelta, R) := Buildings.Fluid.Geothermal.Borefields.BaseClasses.Boreholes.BaseClasses.Functions.multipoleThermalResistances(
     2, 3, xPip, yPip, rBor, rPip, kFil, kSoi, RFluPip);

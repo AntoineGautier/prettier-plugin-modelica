@@ -721,13 +721,61 @@ export function printParenthesizedExpression(
 
 /**
  * Print output_expression_list node
+ * 
+ * Handles the case where some output slots are empty, indicated by
+ * consecutive commas or a leading comma. For example:
+ *   (,labels,cluSiz) - empty first slot
+ *   (a,,c) - empty middle slot
+ * 
+ * Uses the raw tree-sitter node to access comma tokens that are
+ * normally filtered out by the parser.
  */
 export function printOutputExpressionList(
   path: AstPath<ASTNode>,
   _options: object,
   print: PrintFn,
 ): Doc {
-  return join(", ", path.map(print, "children"));
+  const node = path.getValue();
+  const syntaxNode = node._syntaxNode;
+  
+  // If we don't have access to the raw syntax node, fall back to simple join
+  if (!syntaxNode) {
+    return join(", ", path.map(print, "children"));
+  }
+  
+  // Build a map from expression positions to their printed representations
+  const exprMap = new Map<string, { index: number }>();
+  for (let i = 0; i < node.children.length; i++) {
+    const child = node.children[i];
+    const key = `${child.range.start.row}:${child.range.start.column}`;
+    exprMap.set(key, { index: i });
+  }
+  
+  const parts: Doc[] = [];
+  
+  // Iterate through all children of the raw syntax node (including commas)
+  for (let i = 0; i < syntaxNode.childCount; i++) {
+    const rawChild = syntaxNode.child(i);
+    if (!rawChild) continue;
+    
+    if (rawChild.type === ",") {
+      // Add comma - space will come before next expression
+      parts.push(",");
+    } else if (rawChild.isNamed) {
+      // Expression - add space before if after a comma
+      if (parts.length > 0) {
+        parts.push(" ");
+      }
+      // Find and print the corresponding AST child
+      const key = `${rawChild.startPosition.row}:${rawChild.startPosition.column}`;
+      const exprInfo = exprMap.get(key);
+      if (exprInfo !== undefined) {
+        parts.push(path.call(print, "children", exprInfo.index));
+      }
+    }
+  }
+  
+  return parts;
 }
 
 /**

@@ -4,6 +4,9 @@ A [Prettier](https://prettier.io/) plugin for formatting Modelica code.
 
 Uses the [tree-sitter-modelica](https://github.com/OpenModelica/tree-sitter-modelica) grammar for parsing, which generates an abstract syntax tree (AST) that Prettier then formats back into consistently styled source code.
 
+HTML annotations are formatted using Prettier's built-in HTML formatter.
+Certain tags are excluded from formatting to preserve their original content and integration into the document: `pre`, `code`, and `a`.
+
 ## Installation
 
 ```bash

@@ -33,6 +33,10 @@ model Miscellaneous
     redeclare final Buildings.Fluid.Chillers.ModularReversible.BaseClasses.RefrigerantCycleHeatRecovery refCyc(
       redeclare final model RefrigerantCycleChillerCooling=
         RefrigerantCycleChillerCooling));
+  import TypDisSys = Buildings.DHC.Types.DistrictSystemType
+    "District system type enumeration"
+    annotation(Dialog(enable=false),
+      evaluate=true);
 
   final model RefrigerantCycleChillerCooling =
     Buildings.Fluid.Chillers.ModularReversible.RefrigerantCycle.TableData2DLoadDep(

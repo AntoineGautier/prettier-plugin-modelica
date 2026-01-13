@@ -12,7 +12,6 @@ import {
   hardline,
   join,
   isClassDefinitionElement,
-  printChildrenWithSpaces,
   type PrintFn,
 } from "./utils.js";
 
@@ -200,13 +199,60 @@ export function printNamedElement(
 
 /**
  * Print import_clause node
+ * Handles: import name; | import IDENT = name; | import name.*; | import name.{...};
  */
 export function printImportClause(
   path: AstPath<ASTNode>,
   _options: object,
   print: PrintFn,
 ): Doc {
-  return ["import ", ...printChildrenWithSpaces(path, print), ";"];
+  const node = path.getValue();
+  const parts: Doc[] = ["import "];
+
+  // Check if this is an aliased import (import IDENT = name)
+  // by looking for the '=' token in the raw syntax node
+  const syntaxNode = node._syntaxNode;
+  let hasAlias = false;
+  if (syntaxNode) {
+    for (let i = 0; i < syntaxNode.childCount; i++) {
+      const child = syntaxNode.child(i);
+      if (child && child.type === "=") {
+        hasAlias = true;
+        break;
+      }
+    }
+  }
+
+  // Check for trailing elements (description_string, annotation_clause)
+  const hasTrailingElements = node.children.some(
+    (c) => c.type === "description_string" || c.type === "annotation_clause",
+  );
+
+  // Build output based on children
+  for (let i = 0; i < node.children.length; i++) {
+    const child = node.children[i];
+    if (child.type === "import") {
+      // Skip - already added "import " above
+      continue;
+    }
+    if (child.type === "description_string" || child.type === "annotation_clause") {
+      // Description string and annotation go on new indented line
+      parts.push(indent([line, path.call(print, "children", i)]));
+      continue;
+    }
+    if (i > 0 && node.children[i - 1].type !== "import") {
+      // Add space between non-import children, but insert "= " after IDENT if aliased
+      if (hasAlias && node.children[i - 1].type === "IDENT" && child.type === "name") {
+        parts.push(" = ");
+      } else {
+        parts.push(" ");
+      }
+    }
+    parts.push(path.call(print, "children", i));
+  }
+
+  parts.push(";");
+  return hasTrailingElements ? group(parts) : parts;
 }
 
 /**

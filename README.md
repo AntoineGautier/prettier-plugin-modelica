@@ -77,12 +77,3 @@ Add to your `.prettierrc`:
 This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**.
 
 See the [LICENSE](LICENSE) file for the full license text and the [COPYRIGHT](COPYRIGHT) file for copyright and licensing details.
-
-### What This Means
-
-- ✅ You can freely use, modify, and distribute this software
-- ✅ The source code is fully open and available
-- ⚠️ If you modify and distribute this software, you must also distribute your modifications under AGPL v3
-- ⚠️ If you run a modified version on a server accessible to users, you must make the source code available to those users
-
-For more information about AGPL v3, see: https://www.gnu.org/licenses/agpl-3.0.html

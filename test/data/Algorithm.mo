@@ -99,6 +99,12 @@ initial equation
     dpValve_nominal = (m_flow_nominal / Kv_SI) ^ 2;
   end if;
 algorithm
+  G := Modelica.Math.Nonlinear.quadratureLobatto(
+    function Buildings.Fluid.Geothermal.Borefields.BaseClasses.HeatTransfer.ThermalResponseFactors.cylindricalHeatSource_Integrand(Fo=Fo,
+    p=p),
+    a=1e-12,
+    b=100,
+    tolerance=1e-6);
   (, labels, cluSiz) := Buildings.Utilities.Clustering.KMeans(
     TBor, N, nBor, 1, n_cluster_size=nClu);
   // Internal thermal resistances

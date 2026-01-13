@@ -22,7 +22,6 @@ import {
   isInsideGraphicalPrimitive,
   getAnnotationElementName,
   isInContinuationContext,
-  printChildrenWithSpaces,
   type PrintFn,
 } from "./utils.js";
 
@@ -408,11 +407,30 @@ export function printNamedArgument(
 
 /**
  * Print function_partial_application node
+ * 
+ * Grammar: "function" type_specifier "(" optional(named_arguments) ")"
  */
 export function printFunctionPartialApplication(
   path: AstPath<ASTNode>,
   _options: object,
   print: PrintFn,
 ): Doc {
-  return ["function ", ...printChildrenWithSpaces(path, print)];
+  const node = path.getValue();
+  const parts: Doc[] = ["function "];
+  
+  for (let i = 0; i < node.children.length; i++) {
+    const child = node.children[i];
+    if (child.type === "type_specifier") {
+      parts.push(path.call(print, "children", i));
+    } else if (child.type === "named_arguments") {
+      parts.push("(", path.call(print, "children", i), ")");
+    }
+  }
+  
+  // If there were no named_arguments, still add empty parens
+  if (!node.children.some(c => c.type === "named_arguments")) {
+    parts.push("()");
+  }
+  
+  return parts;
 }

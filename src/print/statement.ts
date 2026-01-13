@@ -159,16 +159,23 @@ export function printForStatement(
   const node = path.getValue();
   const parts: Doc[] = ["for "];
   const body: Doc[] = [];
+  let forIndicesNode: ASTNode | null = null;
 
   for (let i = 0; i < node.children.length; i++) {
     const child = node.children[i];
     if (child.type === "for_indices") {
+      forIndicesNode = child;
       parts.push(path.call(print, "children", i), " loop");
     } else if (child.type === "statement_list") {
       body.push(path.call(print, "children", i));
     } else if (isComment(child)) {
-      // Comments between 'loop' and statement_list
-      body.push(path.call(print, "children", i));
+      if (forIndicesNode && onSameLine(forIndicesNode, child)) {
+        // Comment on same line as 'loop' stays inline
+        parts.push(" ", path.call(print, "children", i));
+      } else {
+        // Comments on different line go into the body
+        body.push(path.call(print, "children", i));
+      }
     }
   }
 

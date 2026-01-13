@@ -159,17 +159,27 @@ export function printForEquation(
   const node = path.getValue();
   const parts: Doc[] = ["for "];
   const body: Doc[] = [];
+  let forIndicesNode: ASTNode | null = null;
 
   for (let i = 0; i < node.children.length; i++) {
     const child = node.children[i];
     if (child.type === "for_indices") {
+      forIndicesNode = child;
       parts.push(path.call(print, "children", i), " loop");
     } else if (child.type === "equation_list") {
       body.push(path.call(print, "children", i));
+    } else if (isComment(child)) {
+      if (forIndicesNode && onSameLine(forIndicesNode, child)) {
+        // Comment on same line as 'loop' stays inline
+        parts.push(" ", path.call(print, "children", i));
+      } else {
+        // Comments on different line go into the body
+        body.push(path.call(print, "children", i));
+      }
     }
   }
 
-  parts.push(indent([line, ...body]));
+  parts.push(indent([line, join(hardline, body)]));
   parts.push(hardline, "end for;");
   return group(parts);
 }
@@ -344,21 +354,12 @@ export function printWhenEquation(
 ): Doc {
   const node = path.getValue();
   const parts: Doc[] = [];
+  const body: Doc[] = [];
   let seenCondition = false;
+  let thenNode: ASTNode | null = null;
 
   for (let i = 0; i < node.children.length; i++) {
     const child = node.children[i];
-
-    const maybeTrailingComment = (): Doc[] => {
-      if (i + 1 < node.children.length) {
-        const nextChild = node.children[i + 1];
-        if (isComment(nextChild) && onSameLine(child, nextChild)) {
-          i++;
-          return [" ", path.call(print, "children", i)];
-        }
-      }
-      return [];
-    };
 
     if (child.type === "expression") {
       if (!seenCondition) {
@@ -368,16 +369,32 @@ export function printWhenEquation(
         parts.push(path.call(print, "children", i));
       }
     } else if (child.type === "then") {
-      parts.push(" then", ...maybeTrailingComment());
+      parts.push(" then");
+      thenNode = child;
     } else if (isComment(child)) {
-      parts.push(" ", path.call(print, "children", i));
+      if (thenNode && onSameLine(thenNode, child)) {
+        // Comment on same line as 'then' stays inline
+        parts.push(" ", path.call(print, "children", i));
+      } else if (thenNode) {
+        // Comments after 'then' on different line go into the body
+        body.push(path.call(print, "children", i));
+      } else {
+        parts.push(" ", path.call(print, "children", i));
+      }
     } else if (child.type === "equation_list") {
-      parts.push(indent([line, path.call(print, "children", i)]));
+      body.push(path.call(print, "children", i));
     } else if (child.type === "else_when_equation_clause_list") {
+      if (body.length > 0) {
+        parts.push(indent([line, join(hardline, body)]));
+      }
       parts.push(hardline, path.call(print, "children", i));
+      return group([...parts, hardline, "end when;"]);
     }
   }
 
+  if (body.length > 0) {
+    parts.push(indent([line, join(hardline, body)]));
+  }
   parts.push(hardline, "end when;");
   return group(parts);
 }

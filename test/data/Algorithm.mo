@@ -114,9 +114,9 @@ algorithm
       kThetaSqRt := sqrt(Modelica.Math.exp(a + b * (1 - y))) "y=0 is closed";
     end if;
   end if;
-  if nPre > 1 then
+  if nPre > 1 then // test
     itod := 1;
-    for i in 2:nPre loop
+    for i in 2:nPre loop // test
       // We reached mid-night. Hence, we need to take the next type of day.
       if isMidNight(t + (i - 1) * dt) then
         itod := itod + 1;
@@ -128,10 +128,15 @@ algorithm
     end for;
   end if;
 equation
-  when {sample(t0 + timeStamps[i], period) for i in 1:nT} then
+  when {sample(t0 + timeStamps[i], period) for i in 1:nT} then // OK
+    // test comment
     idx = getIndex(time, period, timeStamps);
     y[:] = val[idx, :];
   end when;
+  for i in 2:nSta loop // OK
+    // Q_flow[i] represents the heat flowing between two nodes
+    Q_flow[i] = G[i] * (T[i - 1] - T[i]);
+  end for;
 annotation(defaultComponentName="intTimTab",
   Documentation(
     info="<html>

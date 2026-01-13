@@ -1,5 +1,5 @@
-model Test;
-final parameter Modelica.Units.SI.HeatFlowRate Q_flow_nominal =
+model Test
+  final parameter Modelica.Units.SI.HeatFlowRate Q_flow_nominal =
     (MediumLiq.specificEnthalpy_pTX(
       MediumLiq.p_default,
       TLiqEnt_nominal,
@@ -19,5 +19,6 @@ final parameter Modelica.Units.SI.HeatFlowRate Q_flow_nominal =
         MediumLiq.p_default,
         TLiqLvg_nominal,
         X=MediumLiq.X_default)
+    if have_test
     "Transmitted heat flow rate at design conditions";
-  end Test;
+end Test;

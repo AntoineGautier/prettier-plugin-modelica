@@ -83,8 +83,7 @@ echo "Checking for differences..."
 if git diff --exit-code --quiet HEAD -- "$TEST_DIR"/*.mo; then
     echo "✓ No formatting differences detected."
 else
-    echo "✗ Formatting differences detected:"
-    echo ""
-    git diff HEAD -- "$TEST_DIR"/*.mo
+    echo "✗ Formatting differences detected."
+    echo "Check with git diff HEAD -- "$TEST_DIR"/*.mo"
     exit 1
 fi

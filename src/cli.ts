@@ -19,6 +19,79 @@ function removeWhitespaceAndComments(content: string): string {
   return noComments.replace(/\s+/g, "");
 }
 
+// Check if a position in the content is within <html>...</html> tags
+function isWithinHtmlTags(content: string, position: number): boolean {
+  const htmlOpenRegex = /<html>/gi;
+  const htmlCloseRegex = /<\/html>/gi;
+
+  // Collect all <html> and </html> positions
+  const opens: number[] = [];
+  const closes: number[] = [];
+
+  let match;
+  while ((match = htmlOpenRegex.exec(content)) !== null) {
+    opens.push(match.index);
+  }
+  while ((match = htmlCloseRegex.exec(content)) !== null) {
+    closes.push(match.index);
+  }
+
+  // For each <html> tag before the position, check if position is before its matching </html>
+  for (const openPos of opens) {
+    if (openPos >= position) continue; // <html> is after the position
+
+    // Find the next </html> after this <html> that doesn't have another <html> in between
+    let closePos = -1;
+    for (const c of closes) {
+      if (c > openPos) {
+        // Check no other <html> between openPos and c
+        const hasOpenBetween = opens.some((o) => o > openPos && o < c);
+        if (!hasOpenBetween) {
+          closePos = c;
+          break;
+        }
+      }
+    }
+
+    // If position is between this <html> and its </html>, we're inside
+    // closePos === -1 handles the case where there's an unclosed <html> tag
+    if (closePos === -1 || position <= closePos) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+// Check if the difference between two strings is only within <html> tags
+function isDiffOnlyInHtml(
+  original: string,
+  originalNoWS: string,
+  formattedNoWS: string,
+): boolean {
+  const diff = findFirstDifference(originalNoWS, formattedNoWS);
+  if (!diff) return true; // No difference
+
+  // Map the position in the no-whitespace string back to approximately the same
+  // position in the original. We need to find where in the original content
+  // the diff corresponds to.
+  //
+  // Since we stripped whitespace and comments, we need to find the Nth non-whitespace
+  // character in the original.
+  let origPos = 0;
+  let noWSCount = 0;
+  const noComments = original.replace(/\/\*[\s\S]*?\*\//g, "");
+
+  while (origPos < noComments.length && noWSCount < diff.position) {
+    if (!/\s/.test(noComments[origPos])) {
+      noWSCount++;
+    }
+    origPos++;
+  }
+
+  return isWithinHtmlTags(original, origPos);
+}
+
 // Find the first differing position between two strings
 function findFirstDifference(
   a: string,
@@ -46,21 +119,22 @@ function findFirstDifference(
   return null;
 }
 
-// Centralized error logging for correctness failures
-function logCorrectnessError(
+// Centralized logging for correctness failures (can be error or warning)
+function logCorrectnessIssue(
   sourceNoWS: string,
   formattedNoWS: string,
+  isWarning: boolean = false,
   additionalMessage?: string,
 ): void {
-  console.error("✗ Correctness check failed!");
-  console.error("Original and formatted content differ (ignoring whitespace).");
-  console.error("Original length (no whitespace):", sourceNoWS.length, "chars");
-  console.error(
-    "Formatted length (no whitespace):",
-    formattedNoWS.length,
-    "chars",
-  );
-  console.error(
+  const log = isWarning ? console.warn : console.error;
+  const symbol = isWarning ? "⚠" : "✗";
+  const label = isWarning ? "Correctness warning" : "Correctness check failed!";
+
+  log(`${symbol} ${label}`);
+  log("Original and formatted content differ (ignoring whitespace).");
+  log("Original length (no whitespace):", sourceNoWS.length, "chars");
+  log("Formatted length (no whitespace):", formattedNoWS.length, "chars");
+  log(
     "Difference:",
     Math.abs(formattedNoWS.length - sourceNoWS.length),
     "chars",
@@ -69,15 +143,15 @@ function logCorrectnessError(
   // Show where the strings first differ
   const diff = findFirstDifference(sourceNoWS, formattedNoWS);
   if (diff) {
-    console.error("");
-    console.error("First difference at position:", diff.position);
-    console.error("  Context: ..." + JSON.stringify(diff.before).slice(1, -1));
-    console.error("  Original:  " + JSON.stringify(diff.diffA).slice(1, -1));
-    console.error("  Formatted: " + JSON.stringify(diff.diffB).slice(1, -1));
+    log("");
+    log("First difference at position:", diff.position);
+    log("  Context: ..." + JSON.stringify(diff.before).slice(1, -1));
+    log("  Original:  " + JSON.stringify(diff.diffA).slice(1, -1));
+    log("  Formatted: " + JSON.stringify(diff.diffB).slice(1, -1));
   }
 
   if (additionalMessage) {
-    console.error(additionalMessage);
+    log(additionalMessage);
   }
 }
 
@@ -206,13 +280,26 @@ async function run() {
     // Check correctness - compare original and formatted (ignoring whitespace)
     const sourceNoWS = removeWhitespaceAndComments(sourceCode);
     const formattedNoWS = removeWhitespaceAndComments(formatted);
-    const isIdempotent = sourceNoWS === formattedNoWS;
+    const isCorrect = sourceNoWS === formattedNoWS;
+
+    // Check if the difference is only within <html> tags (warn but continue)
+    const diffInHtmlOnly =
+      !isCorrect && isDiffOnlyInHtml(sourceCode, sourceNoWS, formattedNoWS);
 
     // If --check flag is present, verify correctness first
     if (check) {
-      if (!isIdempotent) {
-        logCorrectnessError(sourceNoWS, formattedNoWS);
-        process.exit(1);
+      if (!isCorrect) {
+        if (diffInHtmlOnly) {
+          logCorrectnessIssue(
+            sourceNoWS,
+            formattedNoWS,
+            true,
+            "Difference is within <html> tags (formatting anyway)",
+          );
+        } else {
+          logCorrectnessIssue(sourceNoWS, formattedNoWS);
+          process.exit(1);
+        }
       }
 
       // If only --check (no write/output), exit here

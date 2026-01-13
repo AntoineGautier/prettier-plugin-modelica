@@ -12,46 +12,43 @@ npm run setup
 npm install && npm run build
 ```
 
-## CLI Usage
+## Usage
 
 ### Format a file (preview to stdout)
 
 ```bash
-npm run format -- path/to/file.mo
+npx prettier --plugin ./dist/index.js path/to/file.mo  # Directly with prettier
+npm run format -- path/to/file.mo  # CLI equivalent
 ```
 
 ### Format and write back to the same file
 
 ```bash
-npm run format -- path/to/file.mo --write
-npm run format -- path/to/file.mo -w
+npx prettier --plugin ./dist/index.js path/to/file.mo --write  # Directly with prettier
+npm run format -- path/to/file.mo --write  # CLI equivalent
 ```
 
 ### Format and save to a different file
 
 ```bash
-npm run format -- path/to/file.mo --output formatted.mo
-npm run format -- path/to/file.mo -o formatted.mo
+npx prettier --plugin ./dist/index.js path/to/file.mo > formatted.mo  # Directly with prettier
+npm run format -- path/to/file.mo --output formatted.mo  # CLI equivalent
 ```
 
 ### Check correctness (the formatter doesn't break code)
 
 ```bash
 npm run format -- path/to/file.mo --check
-npm run format -- path/to/file.mo -c
 ```
+
+> [!TIP]
+> The `--check` option can be combined with `--write` or `--output` options.
+> If the correctness check fails, the formatting will not produce any output.
 
 ### Simply parse (preview to stdout)
 
 ```bash
 npm run parse -- path/to/file.m
-```
-
-## Using with Prettier directly
-
-```bash
-npx prettier --plugin ./dist/index.js path/to/file.mo
-npx prettier --plugin ./dist/index.js --write path/to/file.mo
 ```
 
 ## Configuration

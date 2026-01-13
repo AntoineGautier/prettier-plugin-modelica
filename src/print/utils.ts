@@ -121,6 +121,28 @@ export function parenContainsIfExpression(node: ASTNode): boolean {
 /**
  * Determines if the current path is inside a context that has already
  * added continuation indentation. This prevents cumulative/stacking indents.
+ *
+ * ⚠️ TECHNICAL DEBT
+ * This is a hacky implementation used as a temporary workaround until a proper
+ * breaking-and-indenting logic is implemented for assignments, binary expressions
+ * and function args.
+ * It WILL necesserily yield incorrect indenting for deeply nested constructs
+ * because it relies on a **static** context analysis, whereas prettier
+ * printWidth-aware builtins make decisions **at print time**.
+ * We should rather have each construct **conditionally** introduce indents
+ * such as prettier JS fluid assignment:
+ *
+ *     // First break right-hand side (no group), then after operator
+ *     case "fluid": {
+ *       const groupId = Symbol("assignment");
+ *       return group([
+ *         group(leftDoc),
+ *         operator,
+ *         group(indent(line), { id: groupId }),
+ *         lineSuffixBoundary,
+ *         indentIfBreak(rightDoc, { groupId }),
+ *       ]);
+ *     }
  */
 export function isInContinuationContext(path: AstPath<ASTNode>): boolean {
   for (let i = 1; i < 15; i++) {
@@ -361,7 +383,9 @@ export function isInsideClassModification(path: AstPath<ASTNode>): boolean {
 /**
  * Check if we're a first-level attribute inside an annotation
  */
-export function isFirstLevelAnnotationAttribute(path: AstPath<ASTNode>): boolean {
+export function isFirstLevelAnnotationAttribute(
+  path: AstPath<ASTNode>,
+): boolean {
   try {
     const grandparent = path.getParentNode(1);
     const greatGrandparent = path.getParentNode(2);
@@ -550,10 +574,7 @@ export function isInsideGraphicalPrimitive(path: AstPath<ASTNode>): boolean {
 /**
  * Print all children without separators
  */
-export function printChildren(
-  path: AstPath<ASTNode>,
-  print: PrintFn,
-): Doc[] {
+export function printChildren(path: AstPath<ASTNode>, print: PrintFn): Doc[] {
   return path.map(print, "children");
 }
 

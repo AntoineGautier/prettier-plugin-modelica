@@ -137,10 +137,13 @@ export function printWhileStatement(
       parts.push(path.call(print, "children", i), " loop");
     } else if (child.type === "statement_list") {
       body.push(path.call(print, "children", i));
+    } else if (isComment(child)) {
+      // Comments between 'loop' and statement_list
+      body.push(path.call(print, "children", i));
     }
   }
 
-  parts.push(indent([line, ...body]));
+  parts.push(indent([line, join(hardline, body)]));
   parts.push(hardline, "end while;");
   return group(parts);
 }
@@ -163,10 +166,13 @@ export function printForStatement(
       parts.push(path.call(print, "children", i), " loop");
     } else if (child.type === "statement_list") {
       body.push(path.call(print, "children", i));
+    } else if (isComment(child)) {
+      // Comments between 'loop' and statement_list
+      body.push(path.call(print, "children", i));
     }
   }
 
-  parts.push(indent([line, ...body]));
+  parts.push(indent([line, join(hardline, body)]));
   parts.push(hardline, "end for;");
   return group(parts);
 }

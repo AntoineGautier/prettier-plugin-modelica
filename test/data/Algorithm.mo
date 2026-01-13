@@ -114,6 +114,19 @@ algorithm
       kThetaSqRt := sqrt(Modelica.Math.exp(a + b * (1 - y))) "y=0 is closed";
     end if;
   end if;
+  if nPre > 1 then
+    itod := 1;
+    for i in 2:nPre loop
+      // We reached mid-night. Hence, we need to take the next type of day.
+      if isMidNight(t + (i - 1) * dt) then
+        itod := itod + 1;
+      end if;
+      /*
+       * OK for now
+       */
+      tod[i] := Integer(typeOfDay[itod]);
+    end for;
+  end if;
 equation
   when {sample(t0 + timeStamps[i], period) for i in 1:nT} then
     idx = getIndex(time, period, timeStamps);

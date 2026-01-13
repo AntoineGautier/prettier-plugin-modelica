@@ -91,6 +91,17 @@ model Miscellaneous
   Buildings.Controls.OBC.CDL.Interfaces.BooleanInput u1PumHeaWatPri_actual[nEnaHeaWat +
     nEnaHeaWat](each start=false)
     if have_heaWat and not (have_valInlIso or have_valOutIso);
+
+  encapsulated function switchInteger
+    "Switch two Integer arguments"
+    input Integer x1 "First argument";
+    input Integer x2 "Second argument";
+    output Integer y1 "Output = x2";
+    output Integer y2 "Output = x1";
+  algorithm
+    y1 := x2;
+    y2 := x1;
+  end switchInteger;
 equation
   y = if initial() then yIni else u;
 end Miscellaneous;

@@ -103,6 +103,8 @@ const INCLUDED_ANONYMOUS_TOKENS = new Set([
   // Element prefix keywords (children of named_element)
   "inner",
   "outer",
+  // Class prefix keyword (children of class_prefixes)
+  "encapsulated",
   // Constraining clause keyword
   "constrainedby",
   // Control flow keywords (for comment attachment in equations/statements)

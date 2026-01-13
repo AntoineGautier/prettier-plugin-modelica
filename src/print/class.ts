@@ -205,7 +205,23 @@ export function printLongClassSpecifier(
     } else if (child.type === "annotation_clause") {
       parts.push(hardline, path.call(print, "children", i));
     } else if (child.type === "external_clause") {
-      parts.push(hardline, path.call(print, "children", i));
+      parts.push(indent([hardline, path.call(print, "children", i)]));
+      // Handle annotation from external_clause - indented +1 relative to external keyword
+      const extAnnotation = child.children.find(
+        (c) => c.type === "annotation_clause",
+      );
+      if (extAnnotation) {
+        const annotationIndex = child.children.indexOf(extAnnotation);
+        parts.push(
+          indent([
+            indent([
+              hardline,
+              path.call(print, "children", i, "children", annotationIndex),
+              ";",
+            ]),
+          ]),
+        );
+      }
     } else if (child.type === "comment" || child.type === "BLOCK_COMMENT") {
       if (blankLineBeforeComment.has(i)) {
         parts.push(

@@ -6,8 +6,12 @@
 import type { AstPath, Doc } from "prettier";
 import type { ASTNode } from "../parser.js";
 import {
+  group,
+  indent,
+  join,
+  line,
+  softline,
   printChildren,
-  printChildrenWithSpaces,
   type PrintFn,
 } from "./utils.js";
 
@@ -56,11 +60,17 @@ export function printExternalClause(
       parts.push(" ", path.call(print, "children", i));
     } else if (child.type === "external_function") {
       parts.push(" ", path.call(print, "children", i));
-    } else if (child.type === "annotation_clause") {
-      parts.push(" ", path.call(print, "children", i));
     }
+    // annotation_clause is handled separately - don't add semicolon if we have annotation
   }
-  parts.push(";");
+
+  // Check if there's an annotation - if so, don't add semicolon here
+  const hasAnnotation = node.children.some(
+    (c) => c.type === "annotation_clause",
+  );
+  if (!hasAnnotation) {
+    parts.push(";");
+  }
   return parts;
 }
 
@@ -77,11 +87,62 @@ export function printLanguageSpecification(
 
 /**
  * Print external_function node
+ * Handles: component_reference = IDENT(expression_list) or just IDENT(expression_list)
  */
 export function printExternalFunction(
   path: AstPath<ASTNode>,
   _options: object,
   print: PrintFn,
 ): Doc {
-  return printChildrenWithSpaces(path, print);
+  const node = path.getValue();
+  const parts: Doc[] = [];
+
+  // Check if this has an assignment (output = func(...))
+  // by looking for '=' in the raw syntax node
+  const syntaxNode = node._syntaxNode;
+  let hasAssignment = false;
+  if (syntaxNode) {
+    for (let i = 0; i < syntaxNode.childCount; i++) {
+      const child = syntaxNode.child(i);
+      if (child && child.type === "=") {
+        hasAssignment = true;
+        break;
+      }
+    }
+  }
+
+  // Build output: [component_reference =] IDENT(expression_list)
+  let foundFuncName = false;
+  for (let i = 0; i < node.children.length; i++) {
+    const child = node.children[i];
+    if (child.type === "component_reference" && !foundFuncName) {
+      // This is the output variable (before the =)
+      parts.push(path.call(print, "children", i));
+      if (hasAssignment) {
+        parts.push(" = ");
+      }
+    } else if (child.type === "IDENT") {
+      // This is the function name
+      foundFuncName = true;
+      parts.push(path.call(print, "children", i));
+    } else if (child.type === "expression_list") {
+      // Format arguments like regular function calls with breaking
+      const args: Doc[] = [];
+      for (let j = 0; j < child.children.length; j++) {
+        args.push(path.call(print, "children", i, "children", j));
+      }
+      if (args.length === 0) {
+        parts.push("()");
+      } else if (args.length === 1) {
+        parts.push(group(["(", args[0], ")"]));
+      } else {
+        // Closing paren attached to last arg
+        parts.push(
+          group(["(", indent([softline, join([",", line], args), ")"]),]),
+        );
+      }
+    }
+  }
+
+  return parts;
 }

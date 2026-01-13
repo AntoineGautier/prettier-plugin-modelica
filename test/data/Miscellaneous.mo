@@ -106,6 +106,24 @@ model Miscellaneous
     y1 := x2;
     y2 := x1;
   end switchInteger;
+
+  pure function pureReadLine
+    "Read a line of text from a file and return it in a string"
+    extends Modelica.Icons.Function;
+    input String fileName "Name of the file that shall be read";
+    input Integer lineNumber(min=1) "Number of line to read";
+    output String string "Line of text";
+    output Boolean endOfFile
+      "If true, end-of-file was reached when trying to read line";
+    external "C" string = ModelicaInternal_readLine(
+      fileName,
+      lineNumber,
+      endOfFile)
+      annotation(IncludeDirectory="modelica://Modelica/Resources/C-Sources",
+        Include="#include \"ModelicaInternal.h\"",
+        Library="ModelicaExternalC");
+  annotation(defaultComponentName="rea");
+  end pureReadLine;
 equation
   y = if initial() then yIni else u;
 end Miscellaneous;

@@ -45,6 +45,9 @@
     "tree-sitter": "^0.25.0",
     "tree-sitter-modelica": "file:grammars/tree-sitter-modelica"
   },
+  "engines": {
+    "node": "^20 || ^22"
+  },
   "devDependencies": {
     "@types/node": "^20.10.0",
     "prettier": "^3.4.2",

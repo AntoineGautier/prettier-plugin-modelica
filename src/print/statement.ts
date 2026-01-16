@@ -226,7 +226,14 @@ export function printIfStatement(
     } else if (child.type === "else") {
       parts.push(hardline, "else", ...maybeTrailingComment());
     } else if (isComment(child)) {
-      parts.push(" ", path.call(print, "children", i));
+      // Check if this comment is on the same line as the previous child
+      const prevChild = i > 0 ? node.children[i - 1] : null;
+      if (prevChild && onSameLine(prevChild, child)) {
+        parts.push(" ", path.call(print, "children", i));
+      } else {
+        // Comment on its own line - indent it
+        parts.push(indent([hardline, path.call(print, "children", i)]));
+      }
     } else if (child.type === "statement_list") {
       parts.push(indent([line, path.call(print, "children", i)]));
     } else if (child.type === "else_if_statement_clause_list") {

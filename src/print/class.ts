@@ -346,6 +346,9 @@ export function printExtendsClassSpecifier(
       parts.push(hardline, path.call(print, "children", i));
     } else if (child.type === "equation_section") {
       parts.push(hardline, path.call(print, "children", i));
+    } else if (child.type === "comment" || child.type === "BLOCK_COMMENT") {
+      // Inline comment after algorithm/equation section - append on same line
+      parts.push(" ", path.call(print, "children", i));
     } else if (child.type === "annotation_clause") {
       parts.push(hardline, path.call(print, "children", i));
       hasAnnotation = true;

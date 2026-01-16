@@ -125,6 +125,10 @@ algorithm
       then Z
       else Buildings.Utilities.Math.Functions.smoothMin(
         x1=Z, x2=0.98, deltaX=0.01));
+    // Symbolic conversion of degC to Kelvin
+    //        ((4.5027e-05)*T_degC^2 - 0.01167152*state.T +
+    //               3.202446788)/((1.5009e-05)*T_degC^3 - 0.00583576*T_degC^2 +
+    //               0.0143711*state.T + 996.194534035)
   else
     if (y > yU) then
       yC := min(1, y);
@@ -146,6 +150,10 @@ algorithm
       tod[i] := Integer(typeOfDay[itod]);
     end for;
   end if;
+  // Symbolic conversion of degC to Kelvin
+  //        ((4.5027e-05)*T_degC^2 - 0.01167152*state.T +
+  //               3.202446788)/((1.5009e-05)*T_degC^3 - 0.00583576*T_degC^2 +
+  //               0.0143711*state.T + 996.194534035)
 equation
   when {sample(t0 + timeStamps[i], period) for i in 1:nT} then // OK
     // test comment

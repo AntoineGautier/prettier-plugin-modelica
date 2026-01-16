@@ -99,6 +99,31 @@ package Air
   </html>"));
   end density_TX_a;
 
+  redeclare replaceable function extends isentropicEnthalpy
+    "Isentropic enthalpy"
+  algorithm
+    h_is := Modelica.Media.Water.IF97_Utilities.isentropicEnthalpy(
+      p=p_downstream,
+      s=specificEntropy(refState),
+      phase=0); // phase 0 means unknown
+  annotation(Inline=true,
+    Documentation(
+      info="<html>
+  <p>Isentropic enthalpy is computed using the IAPWS-IF97 formulation:</p>
+  <ol>
+    <li>A medium is in a particular state, <code>refState</code>.</li>
+    <li>
+      The enthalpy at another state <code>h_is</code> shall be computed under
+      the assumption that the state transformation from <code>refState</code> to
+      <code>h_is</code> is performed with a change of specific entropy
+      <i>ds = 0</i> and the pressure of state <code>h_is</code> is
+      <code>p_downstream</code> and the composition <code>X</code> upstream and
+      downstream is assumed to be the same.
+    </li>
+  </ol>
+  </html>"));
+  end isentropicEnthalpy;
+
   // There must not be any stateSelect=StateSelect.prefer for
   // the pressure.
   // Otherwise, translateModel("Buildings.Fluid.FMI.ExportContainers.Examples.FMUs.ResistanceVolume")

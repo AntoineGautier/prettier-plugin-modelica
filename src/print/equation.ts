@@ -129,21 +129,31 @@ export function printConnectClause(
   const parts: Doc[] = ["connect("];
   const args: Doc[] = [];
   let hasAnnotation = false;
+  let descriptionDoc: Doc | null = null;
 
   for (let i = 0; i < node.children.length; i++) {
     const child = node.children[i];
     if (child.type === "component_reference") {
       args.push(path.call(print, "children", i));
+    } else if (child.type === "description_string") {
+      descriptionDoc = path.call(print, "children", i);
     } else if (child.type === "annotation_clause") {
       hasAnnotation = true;
       parts.push(join(", ", args), ")");
+      if (descriptionDoc) {
+        parts.push(" ", descriptionDoc);
+      }
       parts.push(indent([hardline, path.call(print, "children", i)]));
       parts.push(";");
     }
   }
 
   if (!hasAnnotation) {
-    parts.push(join(", ", args), ");");
+    parts.push(join(", ", args), ")");
+    if (descriptionDoc) {
+      parts.push(" ", descriptionDoc);
+    }
+    parts.push(";");
   }
   return parts;
 }

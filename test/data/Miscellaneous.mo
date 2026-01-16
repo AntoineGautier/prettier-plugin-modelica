@@ -126,4 +126,5 @@ model Miscellaneous
   end pureReadLine;
 equation
   y = if initial() then yIni else u;
+  connect(heaFloSen.Q_flow, Q_flow_internal) "Needed because of conditional input";
 end Miscellaneous;

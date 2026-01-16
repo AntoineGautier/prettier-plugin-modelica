@@ -418,17 +418,46 @@ export function printFunctionPartialApplication(
   const node = path.getValue();
   const parts: Doc[] = ["function "];
   
+  // Find type_specifier and named_arguments indices
+  let typeSpecifierIdx = -1;
+  let namedArgsIdx = -1;
   for (let i = 0; i < node.children.length; i++) {
     const child = node.children[i];
     if (child.type === "type_specifier") {
-      parts.push(path.call(print, "children", i));
+      typeSpecifierIdx = i;
     } else if (child.type === "named_arguments") {
-      parts.push("(", path.call(print, "children", i), ")");
+      namedArgsIdx = i;
     }
   }
   
-  // If there were no named_arguments, still add empty parens
-  if (!node.children.some(c => c.type === "named_arguments")) {
+  if (typeSpecifierIdx >= 0) {
+    parts.push(path.call(print, "children", typeSpecifierIdx));
+  }
+  
+  if (namedArgsIdx >= 0) {
+    // Extract individual named arguments (skip commas)
+    const namedArgsNode = node.children[namedArgsIdx];
+    const args: Doc[] = [];
+    for (let j = 0; j < namedArgsNode.children.length; j++) {
+      const argChild = namedArgsNode.children[j];
+      if (argChild.type !== "," && argChild.text !== ",") {
+        args.push(path.call(print, "children", namedArgsIdx, "children", j));
+      }
+    }
+    
+    if (args.length === 0) {
+      parts.push("()");
+    } else if (args.length === 1) {
+      parts.push(group(["(", indent([softline, args[0]]), ")"]));
+    } else {
+      // Use group with indent so that either all args fit inline or all break
+      parts.push(group([
+        "(",
+        indent([softline, join([",", line], args)]),
+        ")",
+      ]));
+    }
+  } else {
     parts.push("()");
   }
   

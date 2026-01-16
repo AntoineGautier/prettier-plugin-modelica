@@ -261,6 +261,8 @@ export function printElseIfStatementClause(
 ): Doc {
   const node = path.getValue();
   const parts: Doc[] = [];
+  const body: Doc[] = [];
+  let thenNode: ASTNode | null = null;
 
   for (let i = 0; i < node.children.length; i++) {
     const child = node.children[i];
@@ -268,7 +270,7 @@ export function printElseIfStatementClause(
     const maybeTrailingComment = (): Doc[] => {
       if (i + 1 < node.children.length) {
         const nextChild = node.children[i + 1];
-        if (isComment(nextChild) && onSameLine(child, nextChild)) {
+        if (isComment(nextChild) && thenNode && onSameLine(thenNode, nextChild)) {
           i++;
           return [" ", path.call(print, "children", i)];
         }
@@ -283,6 +285,7 @@ export function printElseIfStatementClause(
         node.children[i + 1].type === "then"
       ) {
         i++;
+        thenNode = node.children[i];
         const thenComment = maybeTrailingComment();
         parts.push(
           group([
@@ -299,10 +302,20 @@ export function printElseIfStatementClause(
     } else if (child.type === "then") {
       // 'then' already consumed
     } else if (isComment(child)) {
-      parts.push(" ", path.call(print, "children", i));
+      if (thenNode && onSameLine(thenNode, child)) {
+        // Comment on same line as 'then' stays inline
+        parts.push(" ", path.call(print, "children", i));
+      } else {
+        // Comments on different line go into the body
+        body.push(path.call(print, "children", i));
+      }
     } else if (child.type === "statement_list") {
-      parts.push(indent([line, path.call(print, "children", i)]));
+      body.push(path.call(print, "children", i));
     }
+  }
+
+  if (body.length > 0) {
+    parts.push(indent([line, join(hardline, body)]));
   }
   return parts;
 }

@@ -100,8 +100,9 @@ initial equation
   end if;
 algorithm
   G := Modelica.Math.Nonlinear.quadratureLobatto(
-    function Buildings.Fluid.Geothermal.Borefields.BaseClasses.HeatTransfer.ThermalResponseFactors.cylindricalHeatSource_Integrand(Fo=Fo,
-    p=p),
+    function Buildings.Fluid.Geothermal.Borefields.BaseClasses.HeatTransfer.ThermalResponseFactors.cylindricalHeatSource_Integrand(
+      Fo=Fo,
+      p=p),
     a=1e-12,
     b=100,
     tolerance=1e-6);
@@ -114,6 +115,16 @@ algorithm
     yC := max(0, y);
     kThetaSqRt := sqrt(Modelica.Math.exp(cL[3] + yC * (cL[2] + yC * cL[1])))
       "y=0 is closed";
+  elseif (flowRegime ==
+      Integer(Buildings.Fluid.Types.HeatExchangerFlowRegime.CounterFlow))
+  then // counter flow
+    // a is constraining Z since eps is not defined for Z=1.
+    a := smooth(
+      1,
+      if Z < 0.97
+      then Z
+      else Buildings.Utilities.Math.Functions.smoothMin(
+        x1=Z, x2=0.98, deltaX=0.01));
   else
     if (y > yU) then
       yC := min(1, y);

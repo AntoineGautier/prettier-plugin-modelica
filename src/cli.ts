@@ -63,33 +63,157 @@ function isWithinHtmlTags(content: string, position: number): boolean {
   return false;
 }
 
-// Check if the difference between two strings is only within <html> tags
+// Build a mapping from positions in the no-whitespace-no-comments string
+// back to positions in the original string
+function buildPositionMap(content: string): number[] {
+  const map: number[] = [];
+  let i = 0;
+  while (i < content.length) {
+    // Skip block comments /* ... */
+    if (content[i] === "/" && content[i + 1] === "*") {
+      const endComment = content.indexOf("*/", i + 2);
+      if (endComment !== -1) {
+        i = endComment + 2;
+        continue;
+      }
+    }
+    // Skip whitespace
+    if (/\s/.test(content[i])) {
+      i++;
+      continue;
+    }
+    // Non-whitespace, non-comment character: record its position
+    map.push(i);
+    i++;
+  }
+  return map;
+}
+
+// Use Longest Common Subsequence to find all differing regions
+// Returns array of [fmtStart, fmtEnd] ranges where formatted differs from original
+function findDiffRanges(
+  originalNoWS: string,
+  formattedNoWS: string,
+): Array<[number, number]> {
+  const ranges: Array<[number, number]> = [];
+
+  // Simple diff algorithm: find matching regions and mark gaps as diffs
+  let origIdx = 0;
+  let fmtIdx = 0;
+
+  while (origIdx < originalNoWS.length || fmtIdx < formattedNoWS.length) {
+    // Skip matching characters
+    while (
+      origIdx < originalNoWS.length &&
+      fmtIdx < formattedNoWS.length &&
+      originalNoWS[origIdx] === formattedNoWS[fmtIdx]
+    ) {
+      origIdx++;
+      fmtIdx++;
+    }
+
+    // If both done, we're finished
+    if (origIdx >= originalNoWS.length && fmtIdx >= formattedNoWS.length) {
+      break;
+    }
+
+    // We have a difference - find where they resync
+    // Try to find resync point using a simple lookahead
+    let resynced = false;
+    const maxLookahead = Math.max(
+      originalNoWS.length - origIdx,
+      formattedNoWS.length - fmtIdx,
+    );
+
+    for (let lookAhead = 1; lookAhead <= maxLookahead && !resynced; lookAhead++) {
+      // Try: original skipped some, formatted stayed
+      for (let origSkip = 1; origSkip <= lookAhead && origIdx + origSkip <= originalNoWS.length; origSkip++) {
+        if (
+          origIdx + origSkip < originalNoWS.length &&
+          fmtIdx < formattedNoWS.length &&
+          originalNoWS[origIdx + origSkip] === formattedNoWS[fmtIdx]
+        ) {
+          // Original had extra chars (deleted in formatted)
+          origIdx += origSkip;
+          resynced = true;
+          break;
+        }
+      }
+      if (resynced) break;
+
+      // Try: formatted skipped some, original stayed
+      for (let fmtSkip = 1; fmtSkip <= lookAhead && fmtIdx + fmtSkip <= formattedNoWS.length; fmtSkip++) {
+        if (
+          fmtIdx + fmtSkip < formattedNoWS.length &&
+          origIdx < originalNoWS.length &&
+          originalNoWS[origIdx] === formattedNoWS[fmtIdx + fmtSkip]
+        ) {
+          // Formatted had extra chars (inserted)
+          if (fmtIdx < fmtIdx + fmtSkip) {
+            ranges.push([fmtIdx, fmtIdx + fmtSkip]);
+          }
+          fmtIdx += fmtSkip;
+          resynced = true;
+          break;
+        }
+      }
+      if (resynced) break;
+
+      // Try: both skipped some (substitution)
+      for (let skip = 1; skip <= lookAhead; skip++) {
+        if (
+          origIdx + skip < originalNoWS.length &&
+          fmtIdx + skip < formattedNoWS.length &&
+          originalNoWS[origIdx + skip] === formattedNoWS[fmtIdx + skip]
+        ) {
+          // Both had different chars
+          if (fmtIdx < fmtIdx + skip) {
+            ranges.push([fmtIdx, fmtIdx + skip]);
+          }
+          origIdx += skip;
+          fmtIdx += skip;
+          resynced = true;
+          break;
+        }
+      }
+    }
+
+    // If we couldn't resync, consume remaining
+    if (!resynced) {
+      if (fmtIdx < formattedNoWS.length) {
+        ranges.push([fmtIdx, formattedNoWS.length]);
+      }
+      break;
+    }
+  }
+
+  return ranges;
+}
+
+// Check if all differences between two strings are only within <html> tags
+// We check in the formatted file's domain since indices diverge after each diff
 function isDiffOnlyInHtml(
-  original: string,
+  formatted: string,
   originalNoWS: string,
   formattedNoWS: string,
 ): boolean {
-  const diff = findFirstDifference(originalNoWS, formattedNoWS);
-  if (!diff) return true; // No difference
+  // Build position map for formatted string
+  const posMap = buildPositionMap(formatted);
 
-  // Map the position in the no-whitespace string back to approximately the same
-  // position in the original. We need to find where in the original content
-  // the diff corresponds to.
-  //
-  // Since we stripped whitespace and comments, we need to find the Nth non-whitespace
-  // character in the original.
-  let origPos = 0;
-  let noWSCount = 0;
-  const noComments = original.replace(/\/\*[\s\S]*?\*\//g, "");
+  // Find all diff ranges in formattedNoWS
+  const diffRanges = findDiffRanges(originalNoWS, formattedNoWS);
 
-  while (origPos < noComments.length && noWSCount < diff.position) {
-    if (!/\s/.test(noComments[origPos])) {
-      noWSCount++;
+  // Check each diff range
+  for (const [start, end] of diffRanges) {
+    for (let fmtIdx = start; fmtIdx < end; fmtIdx++) {
+      const fmtFullIdx = fmtIdx < posMap.length ? posMap[fmtIdx] : formatted.length;
+      if (!isWithinHtmlTags(formatted, fmtFullIdx)) {
+        return false; // Difference outside HTML tags
+      }
     }
-    origPos++;
   }
 
-  return isWithinHtmlTags(original, origPos);
+  return true; // All differences (if any) were within HTML tags
 }
 
 // Find the first differing position between two strings
@@ -284,7 +408,7 @@ async function run() {
 
     // Check if the difference is only within <html> tags (warn but continue)
     const diffInHtmlOnly =
-      !isCorrect && isDiffOnlyInHtml(sourceCode, sourceNoWS, formattedNoWS);
+      !isCorrect && isDiffOnlyInHtml(formatted, sourceNoWS, formattedNoWS);
 
     // If --check flag is present, verify correctness first
     if (check) {

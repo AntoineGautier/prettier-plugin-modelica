@@ -149,6 +149,20 @@ annotation(__Dymola_Commands(
     alt=\"Latch.png\"
   />
 </p>
+<p>
+  According to
+  <a href=\"modelica://Modelica.Magnetic.FluxTubes.UsersGuide.Literature\">[YUY89]</a>
+  the used analytical form of the Everett function is parameterized by 8
+  parameters. Several parameter sets were identified to fit measured or
+  published static hysteresis behavior of different materials. These
+  predefined parameter sets are stored in
+  <a href=\"modelica://Modelica.Magnetic.FluxTubes.Material.HysteresisEverettParameter\"><code>FluxTubes.Material.HysteresisEverettParameter</code></a>
+  library and can be used with the
+  <a href=\"modelica://Modelica.Magnetic.FluxTubes.Shapes.HysteresisAndMagnets.GenericHystPreisachEverett\"><code>GenericHystPreisachEverett</code></a>
+  flux tube element. Additionally, also the
+  <a href=\"modelica://Modelica.Magnetic.FluxTubes.Shapes.HysteresisAndMagnets.GenericHystTellinenEverett\"><code>GenericHystTellinenEverett</code></a>
+  element can use this library.
+</p>
 </html>",
     revisions="<html>
 <ul>

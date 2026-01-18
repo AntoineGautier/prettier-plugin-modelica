@@ -67,18 +67,25 @@ export function postProcessHTMLFromPrettier(
 
 /**
  * Normalize closing </html> tag.
- * Prettier puts </html> on its own line with varying indent.
+ * Prettier puts </html> on its own line with varying indent, and adds trailing newline.
  * @param html - The HTML string
  * @param stripIndent - Whether to strip indent before </html> (true for top-level, false for nested)
  */
 function attachClosingHtmlTag(html: string, stripIndent: boolean = true): string {
+  let result = html;
+  
   if (stripIndent) {
     // For top-level: remove indent before </html>
-    return html.replace(/\n\s*<\/html>\s*$/i, "\n</html>");
+    result = result.replace(/\n\s*<\/html>/i, "\n</html>");
   } else {
     // For nested: ensure </html> has consistent 2-space indent
-    return html.replace(/\n\s*<\/html>\s*$/i, "\n  </html>");
+    result = result.replace(/\n\s*<\/html>/i, "\n  </html>");
   }
+  
+  // Remove trailing newline/whitespace after </html>
+  result = result.replace(/<\/html>\s*$/i, "</html>");
+  
+  return result;
 }
 
 /**

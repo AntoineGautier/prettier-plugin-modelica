@@ -6,7 +6,7 @@
 import type { AstPath, Doc } from "prettier";
 import type { ASTNode } from "../parser.js";
 import { formatBlockComment, isInsideAnnotation, type PrintFn } from "./utils.js";
-import { formatHTMLString, DEFAULT_PRESERVED_TAGS } from "../html-formatter.js";
+import { formatHTMLString, DEFAULT_PRESERVED_TAGS } from "./html-formatter.js";
 
 // HTML formatter toggle - will be set from printer.ts
 let usePrettierHTMLFormatter = true;

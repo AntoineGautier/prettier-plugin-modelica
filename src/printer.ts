@@ -5,7 +5,7 @@
 
 import type { AstPath, Doc } from "prettier";
 import type { ASTNode } from "./parser.js";
-import { DEFAULT_PRESERVED_TAGS } from "./html-formatter.js";
+import { DEFAULT_PRESERVED_TAGS } from "./print/html-formatter.js";
 import { isInsideAnnotation, isInsideNamedElement } from "./print/utils.js";
 import {
   setUsePrettierHTMLFormatter as setTerminalHTMLFormatter,
@@ -87,7 +87,7 @@ export function embedHTML(path: AstPath<ASTNode>, _options: any) {
     try {
       // Step 1: Prepare HTML (extract preserved blocks, de-escape quotes)
       const { prepareHTMLForPrettier, postProcessHTMLFromPrettier } =
-        await import("./html-embed-formatter.js");
+        await import("./print/html-embed-formatter.js");
       const { processedHtml, preservedBlocks } = prepareHTMLForPrettier(
         htmlContent,
         DEFAULT_PRESERVED_TAGS,

@@ -3,6 +3,20 @@ package Types
   "Package with type definitions"
   extends Modelica.Icons.TypesPackage;
 
+  /*
+   * ❌ Currently not supported due to a bug in tree-sitter-modelica (ERROR nodes)
+   */
+  // type Logic = enumeration(
+  // 'U' "U  Uninitialized",
+  // 'X' "X  Forcing Unknown",
+  // '0' "0  Forcing 0",
+  // '1' "1  Forcing 1",
+  // 'Z' "Z  High Impedance",
+  // 'W' "W  Weak Unknown",
+  // 'L' "L  Weak 0",
+  // 'H' "H  Weak 1",
+  // '-' "-  Do not care");
+  //
   type EfficiencyCurves = enumeration(
     Constant "constant",
     Polynomial "Polynomial",

@@ -24,22 +24,28 @@ npm install && npm run build
 ### Format a file (preview to stdout)
 
 ```bash
-npx prettier --plugin ./dist/index.js path/to/file.mo  # Directly with prettier
-npm run format -- path/to/file.mo  # CLI equivalent
+# Directly with prettier
+npx prettier --plugin ./dist/index.js path/to/file.mo
+# CLI equivalent
+npm run format -- path/to/file.mo
 ```
 
 ### Format and write back to the same file
 
 ```bash
-npx prettier --plugin ./dist/index.js path/to/file.mo --write  # Directly with prettier
-npm run format -- path/to/file.mo --write  # CLI equivalent
+# Directly with prettier
+npx prettier --plugin ./dist/index.js path/to/file.mo --write
+# CLI equivalent
+npm run format -- path/to/file.mo --write
 ```
 
 ### Format and save to a different file
 
 ```bash
-npx prettier --plugin ./dist/index.js path/to/file.mo > formatted.mo  # Directly with prettier
-npm run format -- path/to/file.mo --output formatted.mo  # CLI equivalent
+# Directly with prettier
+npx prettier --plugin ./dist/index.js path/to/file.mo > formatted.mo
+# CLI equivalent
+npm run format -- path/to/file.mo --output formatted.mo
 ```
 
 ### Check correctness (the formatter doesn't break code)
@@ -55,25 +61,31 @@ npm run format -- path/to/file.mo --check
 ### Simply parse (preview to stdout)
 
 ```bash
-npm run parse -- path/to/file.m
+npm run parse -- path/to/file.mo
 ```
 
-## Configuration
+## Known Limitations
 
-Add to your `.prettierrc`:
+The following constructs are currently not supported due to `tree-sitter-modelica` bugs.
 
-```json
-{
-  "plugins": ["prettier-plugin-modelica"],
-  "overrides": [
-    {
-      "files": "*.mo",
-      "options": {
-        "parser": "modelica"
-      }
-    }
-  ]
-}
+### 1. Quoted Elements in Enumerations
+
+```mo
+type Logic = enumeration(
+  'U' "U  Uninitialized",
+  '0' "0  Forcing 0",
+  '1' "1  Forcing 1",
+  '-' "-  Do not care");
+```
+
+### 2. Empty `equation` Sections
+
+```mo
+model Demo
+  replaceable model Medium = Modelica.Media.Interfaces.PartialMedium
+    "Medium model" annotation (choicesAllMatching=true);
+equation
+end Demo;
 ```
 
 ## License

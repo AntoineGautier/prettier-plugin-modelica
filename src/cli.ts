@@ -318,7 +318,13 @@ function logCorrectnessIssue(
   formattedNoWS: string,
   isWarning: boolean = false,
   additionalMessage?: string,
+  verboseMode: boolean = false,
 ): void {
+  // For warnings (HTML-only diffs), only show in verbose mode
+  if (isWarning && !verboseMode) {
+    return;
+  }
+
   const log = isWarning ? console.warn : console.error;
   const symbol = isWarning ? "⚠" : "✗";
   const label = isWarning ? "Correctness warning" : "Correctness check failed!";
@@ -514,6 +520,7 @@ async function run() {
             formattedNoWS,
             true,
             "Difference is within <html> tags (formatting anyway)",
+            verbose,
           );
         } else {
           logCorrectnessIssue(formatted, sourceNoWS, formattedNoWS);
@@ -524,14 +531,14 @@ async function run() {
       // If only --check (no write/output), exit here
       if (!writeOutput && !outputFile) {
         if (verbose) {
-          console.log("✓ Formatting is idempotent");
+          console.log("✓ Correctness check passed");
         }
         process.exit(0);
       }
       // Otherwise continue to write
     }
 
-    // Write mode - write to file (only if idempotent)
+    // Write mode - write to file (only if correctness checked)
     if (writeOutput || outputFile) {
       const targetFile = outputFile ? path.resolve(outputFile) : sourceFile;
       fs.writeFileSync(targetFile, formatted, "utf8");

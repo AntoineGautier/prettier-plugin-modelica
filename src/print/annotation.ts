@@ -97,16 +97,24 @@ export function printExternalFunction(
   const node = path.getValue();
   const parts: Doc[] = [];
 
-  // Check if this has an assignment (output = func(...))
-  // by looking for '=' in the raw syntax node
+  // Check if this has an assignment (output = func(...)) and/or empty parens
+  // by looking at the raw syntax node (anonymous tokens aren't in node.children)
   const syntaxNode = node._syntaxNode;
   let hasAssignment = false;
+  let hasEmptyParens = false;
   if (syntaxNode) {
+    let foundOpenParen = false;
     for (let i = 0; i < syntaxNode.childCount; i++) {
       const child = syntaxNode.child(i);
       if (child && child.type === "=") {
         hasAssignment = true;
-        break;
+      }
+      if (child && child.type === "(") {
+        foundOpenParen = true;
+      }
+      if (child && child.type === ")" && foundOpenParen) {
+        // Found () without expression_list in between
+        hasEmptyParens = !node.children.some(c => c.type === "expression_list");
       }
     }
   }
@@ -125,6 +133,10 @@ export function printExternalFunction(
       // This is the function name
       foundFuncName = true;
       parts.push(path.call(print, "children", i));
+      // Add empty parens if no expression_list follows
+      if (hasEmptyParens) {
+        parts.push("()");
+      }
     } else if (child.type === "expression_list") {
       // Format arguments like regular function calls with breaking
       const args: Doc[] = [];

@@ -243,8 +243,34 @@ function findFirstDifference(
   return null;
 }
 
+// Find the first diff position outside HTML tags, or fall back to first diff overall
+function findFirstDiffOutsideHtml(
+  formatted: string,
+  sourceNoWS: string,
+  formattedNoWS: string,
+): { position: number; inHtml: boolean } | null {
+  const posMap = buildPositionMap(formatted);
+  const diffRanges = findDiffRanges(sourceNoWS, formattedNoWS);
+
+  if (diffRanges.length === 0) {
+    return null;
+  }
+
+  // First, try to find the first diff outside HTML
+  for (const [start] of diffRanges) {
+    const fmtFullIdx = start < posMap.length ? posMap[start] : formatted.length;
+    if (!isWithinHtmlTags(formatted, fmtFullIdx)) {
+      return { position: start, inHtml: false };
+    }
+  }
+
+  // Fall back to first diff overall (which must be in HTML)
+  return { position: diffRanges[0][0], inHtml: true };
+}
+
 // Centralized logging for correctness failures (can be error or warning)
 function logCorrectnessIssue(
+  formatted: string,
   sourceNoWS: string,
   formattedNoWS: string,
   isWarning: boolean = false,
@@ -264,14 +290,33 @@ function logCorrectnessIssue(
     "chars",
   );
 
-  // Show where the strings first differ
-  const diff = findFirstDifference(sourceNoWS, formattedNoWS);
-  if (diff) {
-    log("");
-    log("First difference at position:", diff.position);
-    log("  Context: ..." + JSON.stringify(diff.before).slice(1, -1));
-    log("  Original:  " + JSON.stringify(diff.diffA).slice(1, -1));
-    log("  Formatted: " + JSON.stringify(diff.diffB).slice(1, -1));
+  // Find the first diff outside HTML, or fall back to first overall
+  const diffInfo = findFirstDiffOutsideHtml(formatted, sourceNoWS, formattedNoWS);
+
+  if (diffInfo) {
+    // Get context around this position
+    const diff = findFirstDifference(
+      sourceNoWS.substring(diffInfo.position),
+      formattedNoWS.substring(diffInfo.position),
+    );
+
+    if (diff) {
+      const actualPosition = diffInfo.position + diff.position;
+      const before = sourceNoWS.substring(
+        Math.max(0, actualPosition - 20),
+        actualPosition,
+      );
+
+      log("");
+      if (diffInfo.inHtml) {
+        log("First difference at position:", actualPosition, "(within <html> tags)");
+      } else {
+        log("First difference at position:", actualPosition);
+      }
+      log("  Context: ..." + JSON.stringify(before).slice(1, -1));
+      log("  Original:  " + JSON.stringify(diff.diffA).slice(1, -1));
+      log("  Formatted: " + JSON.stringify(diff.diffB).slice(1, -1));
+    }
   }
 
   if (additionalMessage) {
@@ -415,13 +460,14 @@ async function run() {
       if (!isCorrect) {
         if (diffInHtmlOnly) {
           logCorrectnessIssue(
+            formatted,
             sourceNoWS,
             formattedNoWS,
             true,
             "Difference is within <html> tags (formatting anyway)",
           );
         } else {
-          logCorrectnessIssue(sourceNoWS, formattedNoWS);
+          logCorrectnessIssue(formatted, sourceNoWS, formattedNoWS);
           process.exit(1);
         }
       }

@@ -1,5 +1,9 @@
 within;
 model ReplaceableComments
+  extends BaseClasses.PartialValve(
+    redeclare replaceable package Medium=Modelica.Media.Water.WaterIF97_ph
+      constrainedby Modelica.Media.Interfaces.PartialTwoPhaseMedium);
+
   replaceable package MediumChiWat = Buildings.Media.Water
     constrainedby Modelica.Media.Interfaces.PartialMedium
     "CHW medium"

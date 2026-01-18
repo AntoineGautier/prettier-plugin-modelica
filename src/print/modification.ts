@@ -354,9 +354,11 @@ export function printClassRedeclaration(
       child.type === "class_definition"
     ) {
       parts.push(" ", path.call(print, "children", i));
+    } else if (child.type === "constraining_clause") {
+      parts.push(indent([line, path.call(print, "children", i)]));
     }
   }
-  return parts;
+  return group(parts);
 }
 
 /**

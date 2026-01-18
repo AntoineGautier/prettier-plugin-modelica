@@ -190,30 +190,73 @@ function findDiffRanges(
   return ranges;
 }
 
-// Check if all differences between two strings are only within <html> tags
-// We check in the formatted file's domain since indices diverge after each diff
-function isDiffOnlyInHtml(
-  formatted: string,
-  originalNoWS: string,
-  formattedNoWS: string,
-): boolean {
-  // Build position map for formatted string
-  const posMap = buildPositionMap(formatted);
+// Get all HTML tag ranges in a string as [start, end] pairs (end is position after </html>)
+function getHtmlRanges(content: string): Array<[number, number]> {
+  const ranges: Array<[number, number]> = [];
+  const htmlOpenRegex = /<html>/gi;
+  const htmlCloseRegex = /<\/html>/gi;
 
-  // Find all diff ranges in formattedNoWS
-  const diffRanges = findDiffRanges(originalNoWS, formattedNoWS);
+  const opens: number[] = [];
+  const closes: number[] = [];
 
-  // Check each diff range
-  for (const [start, end] of diffRanges) {
-    for (let fmtIdx = start; fmtIdx < end; fmtIdx++) {
-      const fmtFullIdx = fmtIdx < posMap.length ? posMap[fmtIdx] : formatted.length;
-      if (!isWithinHtmlTags(formatted, fmtFullIdx)) {
-        return false; // Difference outside HTML tags
+  let match;
+  while ((match = htmlOpenRegex.exec(content)) !== null) {
+    opens.push(match.index);
+  }
+  while ((match = htmlCloseRegex.exec(content)) !== null) {
+    closes.push(match.index + 7); // +7 to include "</html>"
+  }
+
+  // Match each <html> with its corresponding </html>
+  for (const openPos of opens) {
+    let closePos = -1;
+    for (const c of closes) {
+      if (c > openPos) {
+        const hasOpenBetween = opens.some((o) => o > openPos && o < c);
+        if (!hasOpenBetween) {
+          closePos = c;
+          break;
+        }
       }
+    }
+    if (closePos !== -1) {
+      ranges.push([openPos, closePos]);
     }
   }
 
-  return true; // All differences (if any) were within HTML tags
+  return ranges;
+}
+
+// Remove all content within <html>...</html> tags from a string
+function removeHtmlContent(content: string): string {
+  const ranges = getHtmlRanges(content);
+  if (ranges.length === 0) return content;
+
+  let result = "";
+  let lastEnd = 0;
+
+  for (const [start, end] of ranges) {
+    result += content.substring(lastEnd, start);
+    lastEnd = end;
+  }
+  result += content.substring(lastEnd);
+
+  return result;
+}
+
+// Check if all differences between two strings are only within <html> tags
+// We strip HTML content and compare what remains - if identical, diffs are HTML-only
+function isDiffOnlyInHtml(
+  _formatted: string,
+  originalNoWS: string,
+  formattedNoWS: string,
+): boolean {
+  // Remove HTML content from both strings
+  const originalNoHtml = removeHtmlContent(originalNoWS);
+  const formattedNoHtml = removeHtmlContent(formattedNoWS);
+
+  // If the non-HTML portions are identical, all diffs are within HTML
+  return originalNoHtml === formattedNoHtml;
 }
 
 // Find the first differing position between two strings
@@ -281,6 +324,16 @@ function logCorrectnessIssue(
   const label = isWarning ? "Correctness warning" : "Correctness check failed!";
 
   log(`${symbol} ${label}`);
+
+  if (additionalMessage) {
+    log(additionalMessage);
+  }
+
+  // For warnings (HTML-only diffs), skip the detailed diff output
+  if (isWarning) {
+    return;
+  }
+
   log("Original and formatted content differ (ignoring whitespace).");
   log("Original length (no whitespace):", sourceNoWS.length, "chars");
   log("Formatted length (no whitespace):", formattedNoWS.length, "chars");
@@ -317,10 +370,6 @@ function logCorrectnessIssue(
       log("  Original:  " + JSON.stringify(diff.diffA).slice(1, -1));
       log("  Formatted: " + JSON.stringify(diff.diffB).slice(1, -1));
     }
-  }
-
-  if (additionalMessage) {
-    log(additionalMessage);
   }
 }
 

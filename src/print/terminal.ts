@@ -5,7 +5,7 @@
 
 import type { AstPath, Doc } from "prettier";
 import type { ASTNode } from "../parser.js";
-import { formatBlockComment, isInsideAnnotation, type PrintFn } from "./utils.js";
+import { formatBlockComment, isInsideAnnotation, isPartOfStringConcatenation, type PrintFn } from "./utils.js";
 import { formatHTMLString, DEFAULT_PRESERVED_TAGS } from "./html-formatter.js";
 
 // HTML formatter toggle - will be set from printer.ts
@@ -70,6 +70,12 @@ export function printString(
   // Check if this is HTML documentation in an annotation
   const inAnnotation = isInsideAnnotation(path);
   if (inAnnotation && text.includes("<html>")) {
+    // Skip HTML formatting for concatenated strings (may have incomplete HTML)
+    if (isPartOfStringConcatenation(path)) {
+      console.warn("⚠ Skipping HTML formatting for concatenated string (may have incomplete HTML tags)");
+      return text;
+    }
+    
     if (usePrettierHTMLFormatter) {
       // HTML formatting is handled by embedHTML - if we reach here with HTML content,
       // it means the embed formatter failed and Prettier fell back to print.

@@ -6,7 +6,7 @@
 import type { AstPath, Doc } from "prettier";
 import type { ASTNode } from "./parser.js";
 import { DEFAULT_PRESERVED_TAGS } from "./print/html-formatter.js";
-import { isInsideAnnotation, isInsideNamedElement } from "./print/utils.js";
+import { isInsideAnnotation, isInsideNamedElement, isPartOfStringConcatenation } from "./print/utils.js";
 import {
   setUsePrettierHTMLFormatter as setTerminalHTMLFormatter,
   getUsePrettierHTMLFormatter,
@@ -63,6 +63,12 @@ export function embedHTML(path: AstPath<ASTNode>, _options: any) {
 
   // Check if we're inside an annotation
   if (!isInsideAnnotation(path)) {
+    return null;
+  }
+
+  // Skip HTML formatting for strings that are part of concatenation (binary_expression)
+  // These strings may have incomplete/unbalanced HTML tags
+  if (isPartOfStringConcatenation(path)) {
     return null;
   }
 

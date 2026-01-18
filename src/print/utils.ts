@@ -341,6 +341,33 @@ export function isInsideAnnotation(path: AstPath<ASTNode>): boolean {
 }
 
 /**
+ * Check if a STRING node is part of a string concatenation (binary_expression with +)
+ * Such strings may have incomplete/unbalanced HTML tags and should not be HTML-formatted
+ */
+export function isPartOfStringConcatenation(path: AstPath<ASTNode>): boolean {
+  // Walk up the tree: STRING -> string_literal_expression -> literal_expression 
+  // -> primary_expression -> simple_expression -> binary_expression
+  const parent = path.getParentNode();
+  const grandparent = path.getParentNode(1);
+  const greatGrandparent = path.getParentNode(2);
+  
+  if (
+    parent?.type === "string_literal_expression" &&
+    grandparent?.type === "literal_expression" &&
+    greatGrandparent?.type === "primary_expression"
+  ) {
+    const greatGreatGrandparent = path.getParentNode(3);
+    if (greatGreatGrandparent?.type === "simple_expression") {
+      const ggggParent = path.getParentNode(4);
+      if (ggggParent?.type === "binary_expression") {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+/**
  * Check if we're inside a named_element (class/function definition within element_list)
  */
 export function isInsideNamedElement(path: AstPath<ASTNode>): boolean {

@@ -25,7 +25,7 @@ npm install && npm run build
 
 ```bash
 # Directly with prettier
-npx prettier --plugin ./dist/index.js path/to/file.mo
+prettier --plugin ./dist/index.js path/to/file.mo
 # CLI equivalent
 npm run format -- path/to/file.mo
 ```
@@ -34,7 +34,7 @@ npm run format -- path/to/file.mo
 
 ```bash
 # Directly with prettier
-npx prettier --plugin ./dist/index.js path/to/file.mo --write
+prettier --plugin ./dist/index.js path/to/file.mo --write
 # CLI equivalent
 npm run format -- path/to/file.mo --write
 ```
@@ -43,7 +43,7 @@ npm run format -- path/to/file.mo --write
 
 ```bash
 # Directly with prettier
-npx prettier --plugin ./dist/index.js path/to/file.mo > formatted.mo
+prettier --plugin ./dist/index.js path/to/file.mo > formatted.mo
 # CLI equivalent
 npm run format -- path/to/file.mo --output formatted.mo
 ```

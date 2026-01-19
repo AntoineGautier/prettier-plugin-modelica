@@ -98,6 +98,12 @@ initial equation
     Cv = Kv_SI / (rhoStd * 0.0631 / 1000 / sqrt(6895));
     dpValve_nominal = (m_flow_nominal / Kv_SI) ^ 2;
   end if;
+initial algorithm
+  J := 1;
+  // test
+initial algorithm
+  J := 1;
+  // test
 algorithm
   G := Modelica.Math.Nonlinear.quadratureLobatto(
     function Buildings.Fluid.Geothermal.Borefields.BaseClasses.HeatTransfer.ThermalResponseFactors.cylindricalHeatSource_Integrand(

@@ -66,14 +66,14 @@ annotation(defaultComponentName="lat",
   that the clear input <code>clr</code> is <code>false</code> or also became
   at the same time <code>false</code>. The output remains <code>true</code>
   until the clear input <code>clr</code> rises from <code>false</code> to
-  <code>true</code> .
+  <code>true</code> . <--- We verify that empty space after code is preserved.
 </p>
 <p>
   If the clear input <code>clr</code> is <code>true</code>, the output
   <code>y</code> switches to <code>false</code> (if it was <code>true</code>)
   and it remains <code>false</code>, regardless of the value of the latch
   input <code>
-u</code>.
+u</code>. <--- We verify that code content is not formatted.
 </p>
 <p>
   At initial time, if <code>clr = false</code>, then the output will be

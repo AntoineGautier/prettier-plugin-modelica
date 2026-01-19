@@ -19,7 +19,7 @@
     "README.md"
   ],
   "scripts": {
-    "setup": "cd grammars/tree-sitter-modelica && npm i && npm run build",
+    "setup": "cd grammars/tree-sitter-modelica && npm ci && npx tree-sitter generate",
     "build": "tsc",
     "dev": "tsc --watch",
     "clean": "rm -rf dist",

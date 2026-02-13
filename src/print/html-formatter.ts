@@ -12,7 +12,7 @@ export interface HTMLFormatterOptions {
 
 // Order matters: outer tags must come before inner tags they may contain
 // e.g., <a> can contain <code>, so "a" must be processed before "code"
-export const DEFAULT_PRESERVED_TAGS = ["pre", "a", "code"];
+export const DEFAULT_PRESERVED_TAGS = ["pre", "a", "code", "font"];
 
 // Block-level tags that should be on their own lines
 const BLOCK_LEVEL_TAGS = [

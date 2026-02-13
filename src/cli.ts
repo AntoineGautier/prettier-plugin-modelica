@@ -134,6 +134,8 @@ function findDiffRanges(
           originalNoWS[origIdx + origSkip] === formattedNoWS[fmtIdx]
         ) {
           // Original had extra chars (deleted in formatted)
+          // Record a zero-width range at the formatted position where deletion occurred
+          ranges.push([fmtIdx, fmtIdx]);
           origIdx += origSkip;
           resynced = true;
           break;

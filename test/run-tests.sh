@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Test script for prettier-plugin-modelica
-# For each .mo file not containing '_formatted', run prettier and output to _formatted.mo
+# For each .mo file in $TEST_DIR, run prettier and format inplace
 # Then check if there are any git diffs
 
 set -e

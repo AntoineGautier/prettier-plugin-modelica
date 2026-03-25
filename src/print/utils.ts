@@ -226,9 +226,13 @@ export function formatAssignmentRhsCompact(
 export function formatTrailingDescription(
   doc: Doc,
   inChoices: boolean = false,
+  hardNewline: boolean = false,
 ): Doc {
   if (inChoices) {
     return [line, doc];
+  }
+  if (hardNewline) {
+    return indent([hardline, doc]);
   }
   return indent([line, doc]);
 }

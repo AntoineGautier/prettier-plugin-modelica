@@ -87,7 +87,7 @@ export function printComponentDeclaration(
         ),
       );
     } else if (child.type === "annotation_clause") {
-      parts.push(formatTrailingDescription(path.call(print, "children", i)));
+      parts.push(formatTrailingDescription(path.call(print, "children", i), false, true));
     } else if (child.type === "comment") {
       parts.push(" ", path.call(print, "children", i));
     }

@@ -56,6 +56,9 @@ model Annotations
       iconTransformation(extent={{-10,-10},{10,10}},
         rotation=0,
         origin={0,100})));
+  M m1
+    annotation(Placement(transformation(origin={-6,24},
+      extent={{-10,-10},{10,10}})));
 equation
   connect(TChiWatPriSup.port_b, tanChiWatSup.port_a)
     annotation(Line(points={{70,80},{120,80}},

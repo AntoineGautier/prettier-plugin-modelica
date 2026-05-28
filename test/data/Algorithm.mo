@@ -103,6 +103,18 @@ initial algorithm
   // test
 initial algorithm
   J := 1;
+  (
+    nHpHea[iHea, iCoo],
+    nHpCoo[iHea, iCoo],
+    nShcHea[iHea, iCoo],
+    nShcCoo[iHea, iCoo],
+    nShcShc[iHea, iCoo],
+    is_feasible[iHea, iCoo]
+  ) := Buildings.Templates.Utilities.computeNumberOfStagedUnits(
+    iHea - 1, iCoo - 1, nHp, nShc);
+  (nHpHea[iHea, iCoo], nHpCoo[iHea, iCoo]) :=
+    Buildings.Templates.Utilities.computeVeryLongFunctionNameNumberOfStagedUnits(
+    iHea - 1, iCoo - 1, nHp, nShc);
   // test
 algorithm
   G := Modelica.Math.Nonlinear.quadratureLobatto(
@@ -115,7 +127,8 @@ algorithm
   (, labels, cluSiz) := Buildings.Utilities.Clustering.KMeans(
     TBor, N, nBor, 1, n_cluster_size=nClu);
   // Internal thermal resistances
-  (RDelta, R) := Buildings.Fluid.Geothermal.Borefields.BaseClasses.Boreholes.BaseClasses.Functions.multipoleThermalResistances(
+  (RDelta, R) :=
+    Buildings.Fluid.Geothermal.Borefields.BaseClasses.Boreholes.BaseClasses.Functions.multipoleThermalResistances(
     2, 3, xPip, yPip, rBor, rPip, kFil, kSoi, RFluPip);
   if y < yL then
     yC := max(0, y);

@@ -740,7 +740,7 @@ export function printOutputExpressionList(
   
   // If we don't have access to the raw syntax node, fall back to simple join
   if (!syntaxNode) {
-    return join(", ", path.map(print, "children"));
+    return join([",", line], path.map(print, "children"));
   }
   
   // Build a map from expression positions to their printed representations
@@ -762,9 +762,9 @@ export function printOutputExpressionList(
       // Add comma - space will come before next expression
       parts.push(",");
     } else if (rawChild.isNamed) {
-      // Expression - add space before if after a comma
+      // Expression - add line break before if after a comma
       if (parts.length > 0) {
-        parts.push(" ");
+        parts.push(line);
       }
       // Find and print the corresponding AST child
       const key = `${rawChild.startPosition.row}:${rawChild.startPosition.column}`;

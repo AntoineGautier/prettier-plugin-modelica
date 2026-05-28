@@ -9,6 +9,7 @@ import {
   group,
   indent,
   line,
+  softline,
   hardline,
   join,
   formatTrailingDescription,
@@ -455,13 +456,58 @@ export function printMultipleOutputFunctionApplicationStatement(
   for (let i = 0; i < node.children.length; i++) {
     const child = node.children[i];
     if (child.type === "parenthesized_expression") {
-      parts.push(path.call(print, "children", i));
+      // The parenthesized_expression wraps the output_expression_list.
+      // Use indent so items break to a deeper level when they exceed print width.
+      const outputListIdx = child.children.findIndex(
+        (c) => c.type === "output_expression_list",
+      );
+      if (outputListIdx >= 0) {
+        const outputListDoc = path.call(
+          print,
+          "children",
+          i,
+          "children",
+          outputListIdx,
+        );
+        parts.push(
+          group(["(", indent([softline, outputListDoc]), softline, ")"]),
+        );
+      } else {
+        parts.push(path.call(print, "children", i));
+      }
     } else if (child.type === "output_expression_list") {
-      parts.push("(", path.call(print, "children", i), ")");
+      parts.push(
+        group(["(", indent([softline, path.call(print, "children", i)]), softline, ")"]),
+      );
     } else if (child.type === "component_reference") {
-      parts.push(" := ", path.call(print, "children", i));
+      // If the next child is function_call_args, this is the function name.
+      // Group ` := funcName` so it breaks when the name would exceed print width.
+      const nextChild =
+        i + 1 < node.children.length ? node.children[i + 1] : null;
+      if (nextChild && nextChild.type === "function_call_args") {
+        parts.push(
+          group([" :=", indent([line, path.call(print, "children", i)])]),
+        );
+      } else {
+        parts.push(" := ", path.call(print, "children", i));
+      }
     } else if (child.type === "function_application") {
-      parts.push(" := ", path.call(print, "children", i));
+      // Separate function name and args so `:= funcName` can break independently.
+      const nameParts: Doc[] = [];
+      let funcArgsDoc: Doc = "";
+      for (let j = 0; j < child.children.length; j++) {
+        if (child.children[j].type === "function_call_args") {
+          funcArgsDoc = path.call(print, "children", i, "children", j);
+        } else {
+          nameParts.push(path.call(print, "children", i, "children", j));
+        }
+      }
+      const funcNameDoc: Doc =
+        nameParts.length === 1 ? nameParts[0] : nameParts;
+      parts.push(
+        group([" :=", indent([line, funcNameDoc])]),
+        funcArgsDoc,
+      );
     } else if (child.type === "function_call_args") {
       parts.push(path.call(print, "children", i));
     }

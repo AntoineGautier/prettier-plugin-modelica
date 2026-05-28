@@ -9,7 +9,6 @@ import {
   group,
   indent,
   line,
-  softline,
   hardline,
   join,
   formatTrailingDescription,
@@ -469,15 +468,13 @@ export function printMultipleOutputFunctionApplicationStatement(
           "children",
           outputListIdx,
         );
-        parts.push(
-          group(["(", indent([softline, outputListDoc]), softline, ")"]),
-        );
+        parts.push(group(["(", indent([outputListDoc]), ")"]));
       } else {
         parts.push(path.call(print, "children", i));
       }
     } else if (child.type === "output_expression_list") {
       parts.push(
-        group(["(", indent([softline, path.call(print, "children", i)]), softline, ")"]),
+        group(["(", indent([path.call(print, "children", i)]), ")"]),
       );
     } else if (child.type === "component_reference") {
       // If the next child is function_call_args, this is the function name.

@@ -103,14 +103,12 @@ initial algorithm
   // test
 initial algorithm
   J := 1;
-  (
-    nHpHea[iHea, iCoo],
+  (nHpHea[iHea, iCoo],
     nHpCoo[iHea, iCoo],
     nShcHea[iHea, iCoo],
     nShcCoo[iHea, iCoo],
     nShcShc[iHea, iCoo],
-    is_feasible[iHea, iCoo]
-  ) := Buildings.Templates.Utilities.computeNumberOfStagedUnits(
+    is_feasible[iHea, iCoo]) := Buildings.Templates.Utilities.compute(
     iHea - 1, iCoo - 1, nHp, nShc);
   (nHpHea[iHea, iCoo], nHpCoo[iHea, iCoo]) :=
     Buildings.Templates.Utilities.computeVeryLongFunctionNameNumberOfStagedUnits(

@@ -8,6 +8,7 @@ import type { ASTNode } from "../parser.js";
 import {
   group,
   indent,
+  indentIfBreak,
   line,
   hardline,
   join,
@@ -474,26 +475,60 @@ export function printBinaryExpression(
         );
       };
 
+      // Each break-before group carries an id so that a hugging operand can
+      // be indented exactly when the immediately preceding operand broke
+      // onto its own (indented) line: the hug then continues that line, and
+      // its content (e.g. an argument list) must indent from that line, not
+      // from the chain's base level. When the preceding segment did not
+      // break (or hugged instead, leaving its id group unprinted),
+      // indentIfBreak resolves to no indent and the hug keeps the chain's
+      // base level.
       const exprParts: Doc[] = [operands[0]];
+      let prevBreakGroupId: symbol | undefined;
 
       for (let i = 0; i < ops.length; i++) {
         const operand = operands[i + 1];
         const operandNode = operandNodes[i + 1];
+        const breakGroupId = Symbol("operand");
 
         if (operandNode && isHuggable(operandNode)) {
+          const hug = group(operand, { shouldBreak: true });
+          // indentIfBreak DROPS its contents when the referenced group was
+          // never printed (groupModeMap lookup yields neither break nor
+          // flat), so every state must record the break-group's mode: the
+          // zero-width marker registers it as flat in the states that keep
+          // the operand on the current line.
+          const flatMarker = group("", { id: breakGroupId });
           exprParts.push(
             conditionalGroup([
               // Option 1: all inline
-              [" ", ops[i], " ", operand],
+              [flatMarker, " ", ops[i], " ", operand],
               // Option 2: operand hugs the operator and breaks internally
-              [" ", ops[i], " ", group(operand, { shouldBreak: true })],
+              [
+                flatMarker,
+                " ",
+                ops[i],
+                " ",
+                prevBreakGroupId
+                  ? indentIfBreak(hug, { groupId: prevBreakGroupId })
+                  : hug,
+              ],
               // Option 3: break before the operand
-              [" ", ops[i], indent(group([line, operand]))],
+              [
+                " ",
+                ops[i],
+                indent(group([line, operand], { id: breakGroupId })),
+              ],
             ]),
           );
         } else {
-          exprParts.push(" ", ops[i], indent(group([line, operand])));
+          exprParts.push(
+            " ",
+            ops[i],
+            indent(group([line, operand], { id: breakGroupId })),
+          );
         }
+        prevBreakGroupId = breakGroupId;
       }
 
       return group(exprParts);

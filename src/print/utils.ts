@@ -21,6 +21,7 @@ export const { builders } = doc;
 export const {
   group,
   indent,
+  indentIfBreak,
   line,
   softline,
   hardline,

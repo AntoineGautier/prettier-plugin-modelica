@@ -77,13 +77,13 @@ model Miscellaneous
       MediumLiq.specificEnthalpy_pTX(
         MediumLiq.p_default, TLiqLvg_nominal, X=MediumLiq.X_default) +
       mLiq_flow_nominal - MediumLiq.specificEnthalpy_pTX(
-      MediumLiq.p_default, TLiqLvg_nominal, X=MediumLiq.X_default)) *
+        MediumLiq.p_default, TLiqLvg_nominal, X=MediumLiq.X_default)) *
       mLiq_flow_nominal - MediumLiq.specificEnthalpy_pTX(
-      specificEnthalpy_pTX(
-        MediumLiq.p_default, TLiqLvg_nominal, X=MediumLiq.X_default),
-      MediumLiq.p_default,
-      TLiqLvg_nominal,
-      X=MediumLiq.X_default)
+        specificEnthalpy_pTX(
+          MediumLiq.p_default, TLiqLvg_nominal, X=MediumLiq.X_default),
+        MediumLiq.p_default,
+        TLiqLvg_nominal,
+        X=MediumLiq.X_default)
     "Transmitted heat flow rate at design conditions";
   Buildings.Controls.OBC.CDL.Interfaces.BooleanInput u1PumHeaWatPri_actual[nEnaHeaWat +
     nEnaHeaWat](each start=false)

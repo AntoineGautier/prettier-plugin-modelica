@@ -1,5 +1,16 @@
 within;
 model Miscellaneous
+  final parameter Integer nAltHp(final min=0) =
+    if have_hp and not have_php
+    then (if nHp == 1
+      then 1
+      else max(
+        {sum(
+          {(if staHp[i, j] > 0 and staHp[i, j] < 1
+            then 1 else 0) for j in 1:nHp}) for i in 1:nStaHp}))
+    else nHp
+    "Number of lead/lag alternate heat pumps"
+    annotation(Evaluate=true);
   extends Buildings.Fluid.HeatPumps.ModularReversible.BaseClasses.PartialReversibleRefrigerantMachine(
     final use_busConOnl=true,
     final use_COP=have_switchover,

@@ -62,8 +62,8 @@ model ParenEdgeCases
   // Edge case 10: Comparison in parenthesized if with short-circuit logical ops
   parameter Real test10 =
     if outer
-    then (if flag and variable == LongPackage.Module.Type.EnumValue or
-      other_flag
+    then (if flag and variable == LongPackage.Module.Type.EnumValue
+      or other_flag
       then result_a else result_b)
     else result_c;
 end ParenEdgeCases;

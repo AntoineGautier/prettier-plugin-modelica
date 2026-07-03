@@ -596,11 +596,11 @@ initial equation
       m_flow_nominal=hp.mChiWatHp_flow_nominal,
       dp_nominal=max(valIso.dpChiWat_nominal) + dpValCheChiWat_nominal,
       datPum=if typPumChiWatPri ==
-        Buildings.Templates.Plants.HeatPumps.Types.PumpsPrimary.Variable or
-        typPumChiWatPri ==
-        Buildings.Templates.Plants.HeatPumps.Types.PumpsPrimary.Variable and
-        typPumChiWatPri <>
-        Buildings.Templates.Plants.HeatPumps.Types.PumpsPrimary.Constant
+        Buildings.Templates.Plants.HeatPumps.Types.PumpsPrimary.Variable
+        or typPumChiWatPri ==
+          Buildings.Templates.Plants.HeatPumps.Types.PumpsPrimary.Variable
+          and typPumChiWatPri <>
+            Buildings.Templates.Plants.HeatPumps.Types.PumpsPrimary.Constant
         then dat.pumChiWatPriSin[1] else dat.pumHeaWatPriSin[1],
       r_N=yPumChiWatPriSet);
     assert(

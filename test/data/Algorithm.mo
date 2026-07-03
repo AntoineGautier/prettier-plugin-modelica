@@ -133,15 +133,15 @@ algorithm
     kThetaSqRt := sqrt(Modelica.Math.exp(cL[3] + yC * (cL[2] + yC * cL[1])))
       "y=0 is closed";
   elseif (flowRegime ==
-      Integer(Buildings.Fluid.Types.HeatExchangerFlowRegime.CounterFlow))
+    Integer(Buildings.Fluid.Types.HeatExchangerFlowRegime.CounterFlow))
   then // counter flow
     // a is constraining Z since eps is not defined for Z=1.
     a := smooth(
       1,
       if Z < 0.97
-      then Z
-      else Buildings.Utilities.Math.Functions.smoothMin(
-        x1=Z, x2=0.98, deltaX=0.01));
+        then Z
+        else Buildings.Utilities.Math.Functions.smoothMin(
+          x1=Z, x2=0.98, deltaX=0.01));
     // Symbolic conversion of degC to Kelvin
     //        ((4.5027e-05)*T_degC^2 - 0.01167152*state.T +
     //               3.202446788)/((1.5009e-05)*T_degC^3 - 0.00583576*T_degC^2 +

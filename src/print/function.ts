@@ -13,7 +13,6 @@ import {
   hardline,
   join,
   fill,
-  conditionalGroup,
   ifBreak,
   isInsideAnnotation,
   isGraphicalPrimitive,
@@ -21,7 +20,7 @@ import {
   isInsideChoicesAnnotation,
   isInsideGraphicalPrimitive,
   getAnnotationElementName,
-  isInContinuationContext,
+  printAtPosition,
   type PrintFn,
 } from "./utils.js";
 
@@ -66,10 +65,10 @@ export function printFunctionCallArgs(
   if (node.children.length === 0) {
     return "()";
   }
-  const args = path.map(print, "children");
   const inAnnotation = isInsideAnnotation(path);
 
   if (inAnnotation) {
+    const args = path.map(print, "children");
     const parent = path.getParentNode();
     const funcName = parent ? getAnnotationElementName(parent) : null;
 
@@ -164,7 +163,10 @@ export function printFunctionCallArgs(
     return group(parts);
   }
 
-  // Extract all arguments from both function_arguments and named_arguments
+  // Extract all arguments from both function_arguments and named_arguments.
+  // Arguments print in "mid-line" position: even when the call breaks and an
+  // argument starts its own line, an if-expression argument reads best with
+  // its then/else branches indented past `if`.
   const allArgs: Doc[] = [];
   for (let i = 0; i < node.children.length; i++) {
     const child = node.children[i];
@@ -175,7 +177,13 @@ export function printFunctionCallArgs(
       for (let j = 0; j < child.children.length; j++) {
         const argChild = child.children[j];
         if (argChild.type !== "," && argChild.text !== ",") {
-          allArgs.push(path.call(print, "children", i, "children", j));
+          const childIdx = i;
+          const argIdx = j;
+          allArgs.push(
+            printAtPosition("mid-line", () =>
+              path.call(print, "children", childIdx, "children", argIdx),
+            ),
+          );
         }
       }
     }
@@ -183,12 +191,7 @@ export function printFunctionCallArgs(
 
   if (allArgs.length === 0) return "()";
 
-  const inContinuation = isInContinuationContext(path);
-
   if (allArgs.length === 1) {
-    if (inContinuation) {
-      return group(["(", softline, allArgs[0], ")"]);
-    }
     return group(["(", indent([softline, allArgs[0]]), ")"]);
   }
 
@@ -200,71 +203,6 @@ export function printFunctionCallArgs(
   // Nested ifBreak structure (like Prettier JS):
   // - Outer ifBreak: decides whether function call breaks at all
   // - Inner ifBreak: if outer broke, decides whether args inline or separate lines
-  //
-  // Check if we're inside a binary expression by walking up the tree
-  // Don't stop at function_call_args - we need to find binary expressions further up
-  // Binary expressions add indent for continuation lines, so operands need indent
-  let insideBinaryExpression = false;
-  for (let i = 1; i < 15; i++) {
-    const ancestor = path.getParentNode(i);
-    if (!ancestor) break;
-    if (ancestor.type === "binary_expression") {
-      insideBinaryExpression = true;
-      break;
-    }
-    // Stop at boundaries that reset context (but not function_call_args)
-    // Note: Don't stop at "declaration" because binary expressions inside
-    // declarations (like parameter assignments) need to be detected
-    if (ancestor.type === "if_expression" ||
-        ancestor.type === "named_argument" ||
-        ancestor.type === "equation" ||
-        ancestor.type === "statement") {
-      break;
-    }
-  }
-
-  // In continuation context OR inside binary expression, handle specially
-  // Binary expressions only wrap continuation lines in indent, so we need to add indent for args
-  // But if-expressions wrap the entire value in indent, so we don't need to add indent
-  if (insideBinaryExpression) {
-    // Inside binary expression: function call must provide its own indent
-    // Binary expression option 2 sets shouldBreak but doesn't add indent
-    // Use conditionalGroup to try three explicit formatting options
-    // Option 1: All inline - func(a, b, c)
-    // Option 2: Break after '(', args inline - func(\n  a, b, c)
-    // Option 3: Break after '(', each arg on line - func(\n  a,\n  b,\n  c)
-    return conditionalGroup([
-      // Option 1: all inline
-      ["(", join(", ", allArgs), ")"],
-      // Option 2: break with indent, args inline
-      ["(", indent([line, join(", ", allArgs)]), ")"],
-      // Option 3: break with indent, each arg on own line
-      ["(", indent([line, join([",", line], allArgs)]), ")"],
-    ]);
-  }
-
-  if (inContinuation) {
-    // Already in continuation context - no additional indent
-    return group([
-      "(",
-      ifBreak(
-        [
-          line,
-          group(
-            ifBreak(
-              join([",", line], allArgs),  // inner breaks: each arg on line
-              join(", ", allArgs)           // inner doesn't break: args inline
-            )
-          )
-        ],
-        // When outer doesn't break - everything inline
-        join(", ", allArgs)
-      ),
-      ")"
-    ]);
-  }
-
-  // Not in continuation context - wrap entire content in indent
   return group([
     "(",
     indent([
@@ -312,7 +250,9 @@ export function printFunctionArguments(
     }
 
     if (isInsideGraphicalPrimitive(path)) {
-      return join([",", line], args);
+      // Continuation lines of a nested call's argument list (e.g. inside
+      // DynamicSelect) indent one step past the line the call starts on.
+      return indent(join([",", line], args));
     }
 
     const fillItems: Doc[] = [];
@@ -360,7 +300,9 @@ export function printNamedArguments(
     }
 
     if (isInsideGraphicalPrimitive(path)) {
-      return join([",", line], args);
+      // Continuation lines of a nested call's argument list (e.g. inside
+      // DynamicSelect) indent one step past the line the call starts on.
+      return indent(join([",", line], args));
     }
 
     const fillItems: Doc[] = [];
@@ -396,10 +338,15 @@ export function printNamedArgument(
 
   for (let i = 0; i < node.children.length; i++) {
     const child = node.children[i];
+    const idx = i;
     if (child.type === "IDENT") {
       parts.push(child.text ?? "", "=");
     } else {
-      parts.push(indent(path.call(print, "children", i)));
+      // The value is glued after `name=`; it indents its own continuation
+      // lines, so no indent wrapper is needed here.
+      parts.push(
+        printAtPosition("mid-line", () => path.call(print, "children", idx)),
+      );
     }
   }
   return parts;

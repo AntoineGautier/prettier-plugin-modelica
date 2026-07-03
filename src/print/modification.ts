@@ -15,6 +15,7 @@ import {
   fill,
   conditionalGroup,
   formatAssignmentRhs,
+  printAtPosition,
   isInsideAnnotation,
   isChoicesLevel,
   isInsideChoicesAnnotation,
@@ -45,10 +46,21 @@ export function printModification(
       child.type === "expression" ||
       child.type === "simple_expression"
     ) {
+      const idx = i;
       if (isTopLevelAssignment) {
-        parts.push(formatAssignmentRhs(path.call(print, "children", i)));
+        // ` = ` breaks all-or-nothing, so a breaking value starts its line.
+        parts.push(
+          formatAssignmentRhs(
+            printAtPosition("line-start", () =>
+              path.call(print, "children", idx),
+            ),
+          ),
+        );
       } else {
-        parts.push("=", path.call(print, "children", i));
+        parts.push(
+          "=",
+          printAtPosition("mid-line", () => path.call(print, "children", idx)),
+        );
       }
     }
   }

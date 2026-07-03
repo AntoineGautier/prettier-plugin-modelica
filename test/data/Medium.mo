@@ -690,8 +690,9 @@ as required from medium model \"Buildings.Media.Air\".");
   algorithm
     // Note that d/dStp = p/pStp, hence p = d*pStp/dStp
     state := if size(X, 1) == nX
-    then ThermodynamicState(p=d * pStp / dStp, T=T, X=X)
-    else ThermodynamicState(p=d * pStp / dStp, T=T, X=cat(1, X, {1 - sum(X)}));
+      then ThermodynamicState(p=d * pStp / dStp, T=T, X=X)
+      else ThermodynamicState(
+        p=d * pStp / dStp, T=T, X=cat(1, X, {1 - sum(X)}));
   annotation(smoothOrder=2,
     Inline=true,
     Documentation(
@@ -709,9 +710,9 @@ as required from medium model \"Buildings.Media.Air\".");
     "Return thermodynamic state as function of pressure p, specific enthalpy h and composition X"
   algorithm
     state := if size(X, 1) == nX
-    then ThermodynamicState(p=p, T=temperature_phX(p, h, X), X=X)
-    else ThermodynamicState(
-      p=p, T=temperature_phX(p, h, X), X=cat(1, X, {1 - sum(X)}));
+      then ThermodynamicState(p=p, T=temperature_phX(p, h, X), X=X)
+      else ThermodynamicState(
+        p=p, T=temperature_phX(p, h, X), X=cat(1, X, {1 - sum(X)}));
   annotation(smoothOrder=2,
     Inline=true,
     Documentation(
@@ -727,8 +728,8 @@ as required from medium model \"Buildings.Media.Air\".");
     "Return thermodynamic state as function of p, T and composition X or Xi"
   algorithm
     state := if size(X, 1) == nX
-    then ThermodynamicState(p=p, T=T, X=X)
-    else ThermodynamicState(p=p, T=T, X=cat(1, X, {1 - sum(X)}));
+      then ThermodynamicState(p=p, T=T, X=X)
+      else ThermodynamicState(p=p, T=T, X=cat(1, X, {1 - sum(X)}));
   annotation(smoothOrder=2,
     Inline=true,
     Documentation(

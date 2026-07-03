@@ -55,143 +55,60 @@ export const GRAPHICAL_PRIMITIVES = new Set([
 // ===========================================
 
 /**
- * Checks if a node at a given index in an if_expression is a then/else VALUE
- * (as opposed to the condition). In an if_expression:
- * - children[0] is the condition
- * - children[1] is the then-value
- * - children[2+] are else_if_clause or the else-value
- */
-export function isIfExpressionValue(
-  ifExpr: ASTNode,
-  childIndex: number,
-): boolean {
-  if (childIndex === 0) return false; // condition
-  if (childIndex === 1) return true; // then-value
-  const child = ifExpr.children[childIndex];
-  return child && child.type !== "else_if_clause";
-}
-
-/**
- * Determines if the current path is inside an if_expression's then or else VALUE
- * (not the condition). This is used to propagate continuation context through
- * nested if-expressions.
- */
-export function isInsideIfExpressionValue(path: AstPath<ASTNode>): boolean {
-  for (let i = 1; i < 20; i++) {
-    const ancestor = path.getParentNode(i);
-    if (!ancestor) break;
-
-    if (ancestor.type === "if_expression") {
-      const prevAncestor = path.getParentNode(i - 1);
-      if (!prevAncestor) break;
-
-      const childIndex = ancestor.children.findIndex((c) => c === prevAncestor);
-      if (childIndex >= 0 && isIfExpressionValue(ancestor, childIndex)) {
-        return true;
-      }
-    }
-
-    // Stop at major boundaries
-    if (ancestor.type === "declaration") break;
-    if (ancestor.type === "component_declaration") break;
-    if (ancestor.type === "equation") break;
-    if (ancestor.type === "statement") break;
-    if (ancestor.type === "element") break;
-  }
-  return false;
-}
-
-/**
- * Checks if a parenthesized_expression node directly contains an if_expression as its core content.
- */
-export function parenContainsIfExpression(node: ASTNode): boolean {
-  if (node.type !== "parenthesized_expression") return false;
-
-  const outputList = node.children.find(
-    (c) => c.type === "output_expression_list",
-  );
-  if (!outputList) return false;
-
-  const expr = outputList.children.find((c) => c.type === "expression");
-  if (!expr) return false;
-
-  return expr.children.some((c) => c.type === "if_expression");
-}
-
-/**
- * Determines if the current path is inside a context that has already
- * added continuation indentation. This prevents cumulative/stacking indents.
+ * Position of an expression relative to the line it starts on.
  *
- * ⚠️ TECHNICAL DEBT
- * This is a hacky implementation used as a temporary workaround until a proper
- * breaking-and-indenting logic is implemented for assignments, binary expressions
- * and function args.
- * It WILL necesserily yield incorrect indenting for deeply nested constructs
- * because it relies on a **static** context analysis, whereas prettier
- * printWidth-aware builtins make decisions **at print time**.
- * We should rather have each construct **conditionally** introduce indents
- * such as prettier JS fluid assignment:
+ * Every breaking construct (binary chains, comparisons, function args,
+ * if-expressions) unconditionally indents its own continuation lines, so
+ * indentation composes without any knowledge of ancestors. The only context
+ * a construct needs from its parent is its layout position (which decides
+ * layout, not indentation ownership):
  *
- *     // First break right-hand side (no group), then after operator
- *     case "fluid": {
- *       const groupId = Symbol("assignment");
- *       return group([
- *         group(leftDoc),
- *         operator,
- *         group(indent(line), { id: groupId }),
- *         lineSuffixBoundary,
- *         indentIfBreak(rightDoc, { groupId }),
- *       ]);
- *     }
+ * - "mid-line": the expression continues a line (`name=`, `then `, `lhs = `
+ *   in equations, function args, binary operands). An if-expression here
+ *   indents its then/else branches relative to `if`.
+ * - "line-start": the expression begins a line of its own (declaration rhs
+ *   after ` =` breaks, comparison rhs after the operator breaks). An
+ *   if-expression here keeps then/else aligned with `if`.
+ *
+ * The parent sets the position by wrapping the child's print call in
+ * printAtPosition().
+ *
+ * ⚠️ Prettier caches the printed doc per node: only the FIRST print of a
+ * node builds its doc. A position wrapper is therefore only effective if it
+ * wraps the first print of that subtree — never pre-print children (e.g. a
+ * blanket `path.map(print, "children")`) that are later re-printed with a
+ * position wrapper, or the wrapper will silently see the cached doc.
  */
-export function isInContinuationContext(path: AstPath<ASTNode>): boolean {
-  for (let i = 1; i < 15; i++) {
-    const ancestor = path.getParentNode(i);
-    if (!ancestor) break;
+export type ExprPosition = "line-start" | "mid-line";
 
-    if (ancestor.type === "named_argument") {
-      return true;
-    }
+const positionStack: ExprPosition[] = [];
 
-    if (ancestor.type === "if_expression") {
-      if (isInsideIfExpressionValue(path)) {
-        return true;
-      }
-      const ifParent = path.getParentNode(i + 1);
-      if (
-        ifParent?.type === "expression" ||
-        ifParent?.type === "simple_expression"
-      ) {
-        const ifGrandparent = path.getParentNode(i + 2);
-        if (ifGrandparent?.type === "output_expression_list") {
-          const ifGreatGrandparent = path.getParentNode(i + 3);
-          if (ifGreatGrandparent?.type === "parenthesized_expression") {
-            return true;
-          }
-        }
-      }
-    }
-
-    // Stop at these boundaries
-    if (ancestor.type === "declaration") break;
-    if (ancestor.type === "component_declaration") break;
-    if (ancestor.type === "equation") break;
-    if (ancestor.type === "statement") break;
-    if (ancestor.type === "element") break;
-    if (ancestor.type === "function_call_args") break;
+/**
+ * Prints a subexpression with the given position context.
+ */
+export function printAtPosition<T>(position: ExprPosition, print: () => T): T {
+  positionStack.push(position);
+  try {
+    return print();
+  } finally {
+    positionStack.pop();
   }
-  return false;
 }
 
 /**
- * Wraps a document in continuation indentation, but only if not already
- * in a continuation context.
+ * Position context set by the nearest enclosing construct. Defaults to
+ * "mid-line" (the safe choice: it can only add indentation, never lose it).
  */
-export function wrapContinuation(content: Doc, path: AstPath<ASTNode>): Doc {
-  if (isInContinuationContext(path)) {
-    return group([line, content]);
-  }
-  return group([indent([line, content])]);
+export function currentPosition(): ExprPosition {
+  return positionStack[positionStack.length - 1] ?? "mid-line";
+}
+
+/**
+ * Formats the right-hand side of a binary operator with line-break behavior.
+ * Pattern: ` <op> value` where the value breaks onto an indented line.
+ */
+export function formatBinaryRhs(operator: string, rhsDoc: Doc): Doc {
+  return [" ", operator, indent(group([line, rhsDoc]))];
 }
 
 // ===========================================
@@ -294,36 +211,6 @@ export function formatBlockComment(text: string): Doc {
 // ===========================================
 // Context Detection Functions
 // ===========================================
-
-/**
- * Determines if an if-expression appears "mid-line" - i.e., after something
- * on the same line like `name=if ...` or `arg=if ...`.
- */
-export function isMidLineIfExpression(path: AstPath<ASTNode>): boolean {
-  const parent = path.getParentNode();
-  const grandparent = path.getParentNode(1);
-  const greatGrandparent = path.getParentNode(2);
-
-  if (parent?.type === "expression" || parent?.type === "simple_expression") {
-    if (grandparent?.type === "modification") {
-      if (
-        greatGrandparent?.type === "element_modification" ||
-        greatGrandparent?.type === "named_argument"
-      ) {
-        return true;
-      }
-    }
-  }
-
-  if (
-    (parent?.type === "simple_expression" || parent?.type === "expression") &&
-    grandparent?.type === "simple_equation"
-  ) {
-    return true;
-  }
-
-  return false;
-}
 
 /**
  * Check if we're inside an annotation clause by walking up the path

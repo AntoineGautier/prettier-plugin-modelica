@@ -14,11 +14,9 @@ import {
   conditionalGroup,
   printChildren,
   printChildrenWithSpaces,
-  isInContinuationContext,
-  isMidLineIfExpression,
-  isInsideIfExpressionValue,
-  parenContainsIfExpression,
-  wrapContinuation,
+  printAtPosition,
+  currentPosition,
+  formatBinaryRhs,
   type PrintFn,
 } from "./utils.js";
 
@@ -35,6 +33,12 @@ export function printExpression(
 
 /**
  * Print if_expression node
+ *
+ * The condition and the then/else values are glued after `if `/`then `/`else `
+ * so they print in "mid-line" position and indent their own continuation
+ * lines. Layout of the then/else branches depends on this expression's own
+ * position: at a line start they stay aligned with `if`; mid-line they are
+ * indented relative to the line the `if` starts on.
  */
 export function printIfExpression(
   path: AstPath<ASTNode>,
@@ -45,9 +49,7 @@ export function printIfExpression(
   const children = node.children;
   let childIdx = 0;
 
-  const inContinuation = isInContinuationContext(path);
-  const midLine = isMidLineIfExpression(path);
-  const nestedInIfValue = isInsideIfExpressionValue(path);
+  const position = currentPosition();
 
   const conditionParts: Doc[] = [];
   let thenExprDoc: Doc = "";
@@ -65,14 +67,20 @@ export function printIfExpression(
   };
 
   if (children[childIdx]) {
-    conditionParts.push(path.call(print, "children", childIdx));
+    const condIdx = childIdx;
+    conditionParts.push(
+      printAtPosition("mid-line", () => path.call(print, "children", condIdx)),
+    );
     childIdx++;
   }
 
   skipKeywords();
 
   if (children[childIdx] && children[childIdx].type !== "else_if_clause") {
-    thenExprDoc = path.call(print, "children", childIdx);
+    const thenIdx = childIdx;
+    thenExprDoc = printAtPosition("mid-line", () =>
+      path.call(print, "children", thenIdx),
+    );
     childIdx++;
   }
 
@@ -81,61 +89,31 @@ export function printIfExpression(
     if (childIdx >= children.length) break;
 
     const child = children[childIdx];
+    const idx = childIdx;
     if (child.type === "else_if_clause") {
-      elseIfParts.push(line, path.call(print, "children", childIdx));
+      elseIfParts.push(line, path.call(print, "children", idx));
     } else if (child.type !== "then" && child.type !== "else") {
-      elseExprDoc = path.call(print, "children", childIdx);
+      elseExprDoc = printAtPosition("mid-line", () =>
+        path.call(print, "children", idx),
+      );
     }
     childIdx++;
   }
 
-  if (inContinuation) {
-    return group([
-      "if ",
-      ...conditionParts,
-      line,
-      group([
-        "then ",
-        indent(thenExprDoc),
-        ...elseIfParts,
-        line,
-        "else ",
-        indent(elseExprDoc),
-      ]),
-    ]);
-  }
-
-  if (midLine || nestedInIfValue) {
-    return group([
-      "if ",
-      ...conditionParts,
-      indent([
-        line,
-        group([
-          "then ",
-          indent(thenExprDoc),
-          ...elseIfParts,
-          line,
-          "else ",
-          indent(elseExprDoc),
-        ]),
-      ]),
-    ]);
-  }
-
-  return group([
-    "if ",
-    ...conditionParts,
+  const core = group([
+    "then ",
+    thenExprDoc,
+    ...elseIfParts,
     line,
-    group([
-      "then ",
-      indent(thenExprDoc),
-      ...elseIfParts,
-      line,
-      "else ",
-      indent(elseExprDoc),
-    ]),
+    "else ",
+    elseExprDoc,
   ]);
+
+  if (position === "line-start") {
+    return group(["if ", ...conditionParts, line, core]);
+  }
+
+  return group(["if ", ...conditionParts, indent([line, core])]);
 }
 
 /**
@@ -155,11 +133,16 @@ export function printElseIfClause(
     const child = node.children[i];
     if (child.type === "then") continue;
 
+    const idx = i;
     if (!seenCondition) {
-      conditionParts.push(path.call(print, "children", i));
+      conditionParts.push(
+        printAtPosition("mid-line", () => path.call(print, "children", idx)),
+      );
       seenCondition = true;
     } else {
-      thenExprDoc = path.call(print, "children", i);
+      thenExprDoc = printAtPosition("mid-line", () =>
+        path.call(print, "children", idx),
+      );
     }
   }
 
@@ -349,7 +332,13 @@ export function printBinaryExpression(
             }
           }
         }
-        operands.push({ doc: print(p), trailingComments: [] });
+        // Operands after the first are glued after their operator once the
+        // chain breaks (`and <operand>`), i.e. they print mid-line.
+        const doc =
+          operands.length === 0
+            ? print(p)
+            : printAtPosition("mid-line", () => print(p));
+        operands.push({ doc, trailingComments: [] });
       };
 
       flattenLogical(path);
@@ -370,33 +359,19 @@ export function printBinaryExpression(
         return [op.doc, hardline, join(hardline, op.trailingComments)];
       };
 
-      const inContinuation = isInContinuationContext(path);
-
-      if (inContinuation) {
-        const resultParts: Doc[] = [formatOperand(operands[0])];
-        for (let i = 0; i < ops.length; i++) {
-          resultParts.push(
-            " ",
-            ops[i],
-            group([line, formatOperand(operands[i + 1])]),
-          );
-        }
-        return group(resultParts);
-      } else {
-        const continuationParts: Doc[] = [];
-        for (let i = 0; i < ops.length; i++) {
-          continuationParts.push(
-            line,
-            ops[i],
-            " ",
-            formatOperand(operands[i + 1]),
-          );
-        }
-        return group([
-          formatOperand(operands[0]),
-          indent(continuationParts),
-        ]);
+      const continuationParts: Doc[] = [];
+      for (let i = 0; i < ops.length; i++) {
+        continuationParts.push(
+          line,
+          ops[i],
+          " ",
+          formatOperand(operands[i + 1]),
+        );
       }
+      return group([
+        formatOperand(operands[0]),
+        indent(continuationParts),
+      ]);
     }
 
     // Arithmetic operators
@@ -474,7 +449,14 @@ export function printBinaryExpression(
             }
           }
         }
-        operands.push(print(p));
+        // The first operand keeps this chain's own position; the others are
+        // glued after their operator (or start a broken, indented line, which
+        // reads best with the same mid-line layout).
+        operands.push(
+          operands.length === 0
+            ? print(p)
+            : printAtPosition("mid-line", () => print(p)),
+        );
         operandNodes.push(unwrapToCore(n));
       };
 
@@ -483,8 +465,6 @@ export function printBinaryExpression(
       if (ops.length === 0) {
         return operands[0];
       }
-
-      const inContinuation = isInContinuationContext(path);
 
       const isHuggable = (n: ASTNode): boolean => {
         return (
@@ -501,34 +481,18 @@ export function printBinaryExpression(
         const operandNode = operandNodes[i + 1];
 
         if (operandNode && isHuggable(operandNode)) {
-          const option3: Doc = inContinuation
-            ? [" ", ops[i], group([line, operand])]
-            : [" ", ops[i], indent(group([line, operand]))];
-          // For option 2: parenthesized_expression with if_expression needs indent wrapper
-          // BUT only if the binary expression itself is NOT in continuation context
-          // If binary expression is already in continuation context (e.g., inside another paren),
-          // the parent already provides indent, so don't add another
-          const option2Operand =
-            operandNode.type === "parenthesized_expression" &&
-            !inContinuation &&
-            parenContainsIfExpression(operandNode)
-              ? indent(group(operand, { shouldBreak: true }))
-              : operandNode.type === "function_application"
-              ? group(operand, { shouldBreak: true })
-              : group(operand, { shouldBreak: true });
           exprParts.push(
             conditionalGroup([
+              // Option 1: all inline
               [" ", ops[i], " ", operand],
-              [" ", ops[i], " ", option2Operand],
-              option3,
+              // Option 2: operand hugs the operator and breaks internally
+              [" ", ops[i], " ", group(operand, { shouldBreak: true })],
+              // Option 3: break before the operand
+              [" ", ops[i], indent(group([line, operand]))],
             ]),
           );
         } else {
-          if (inContinuation) {
-            exprParts.push(" ", ops[i], group([line, operand]));
-          } else {
-            exprParts.push(" ", ops[i], indent(group([line, operand])));
-          }
+          exprParts.push(" ", ops[i], indent(group([line, operand])));
         }
       }
 
@@ -542,23 +506,20 @@ export function printBinaryExpression(
         path.call(print, "children", ci),
       );
       const leftDoc = path.call(print, "children", leftIdx);
-      const rightDoc = path.call(print, "children", rightIdx);
+      // The right-hand side only breaks onto its own (indented) line, so it
+      // prints in "line-start" position.
+      const rightDoc = printAtPosition("line-start", () =>
+        path.call(print, "children", rightIdx),
+      );
       if (commentDocs.length > 0) {
         return group([
           leftDoc,
           hardline,
           join(hardline, commentDocs),
-          " ",
-          operator,
-          wrapContinuation(rightDoc, path),
+          formatBinaryRhs(operator, rightDoc),
         ]);
       }
-      return group([
-        leftDoc,
-        " ",
-        operator,
-        wrapContinuation(rightDoc, path),
-      ]);
+      return group([leftDoc, formatBinaryRhs(operator, rightDoc)]);
     }
 
     // Other operators

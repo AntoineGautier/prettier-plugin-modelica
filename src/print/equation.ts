@@ -14,6 +14,7 @@ import {
   formatTrailingDescription,
   isComment,
   onSameLine,
+  printAtPosition,
   printChildren,
   type PrintFn,
 } from "./utils.js";
@@ -87,7 +88,12 @@ export function printSimpleEquation(
         child.type === "simple_expression" ||
         child.type === "expression"
       ) {
-        result.push(path.call(print, "children", i));
+        // The right-hand side is glued after `lhs = ` and indents its own
+        // continuation lines.
+        const idx = i;
+        result.push(
+          printAtPosition("mid-line", () => path.call(print, "children", idx)),
+        );
       } else if (child.type === "description_string") {
         result.push(
           formatTrailingDescription(path.call(print, "children", i)),
@@ -334,14 +340,14 @@ export function printElseIfEquationClause(
         parts.push(
           group([
             "elseif ",
-            indent(condExpr),
+            condExpr,
             line,
             "then",
             ...thenComment,
           ]),
         );
       } else {
-        parts.push(group(["elseif ", indent(condExpr), line, "then"]));
+        parts.push(group(["elseif ", condExpr, line, "then"]));
       }
     } else if (child.type === "then") {
       // 'then' already consumed

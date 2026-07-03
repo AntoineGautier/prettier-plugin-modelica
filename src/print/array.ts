@@ -16,6 +16,7 @@ import {
   isCoordinateArray,
   isGraphicsArray,
   isGraphicalPrimitive,
+  printAtPosition,
   printChildren,
   type PrintFn,
 } from "./utils.js";
@@ -95,10 +96,10 @@ export function printArrayArguments(
   print: PrintFn,
 ): Doc {
   const node = path.getValue();
-  const args = path.map(print, "children");
   const inAnnotation = isInsideAnnotation(path);
 
   if (inAnnotation) {
+    const args = path.map(print, "children");
     if (isCoordinateArray(node)) {
       return join(",", args);
     }
@@ -127,14 +128,22 @@ export function printArrayArguments(
   }
 
   // Non-annotation: first element hugs opener, subsequent elements break with continuation indent
-  if (args.length === 0) return "";
-  if (args.length === 1) return args[0];
+  if (node.children.length === 0) return "";
+  if (node.children.length === 1) return path.call(print, "children", 0);
 
+  const first = path.call(print, "children", 0);
   const continuationParts: Doc[] = [];
-  for (let i = 1; i < args.length; i++) {
-    continuationParts.push(",", group([line, args[i]]));
+  for (let i = 1; i < node.children.length; i++) {
+    const idx = i;
+    continuationParts.push(
+      ",",
+      group([
+        line,
+        printAtPosition("mid-line", () => path.call(print, "children", idx)),
+      ]),
+    );
   }
-  return [args[0], indent(continuationParts)];
+  return [first, indent(continuationParts)];
 }
 
 /**

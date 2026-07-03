@@ -297,14 +297,14 @@ export function printElseIfStatementClause(
         parts.push(
           group([
             "elseif ",
-            indent(condExpr),
+            condExpr,
             line,
             "then",
             ...thenComment,
           ]),
         );
       } else {
-        parts.push(group(["elseif ", indent(condExpr), line, "then"]));
+        parts.push(group(["elseif ", condExpr, line, "then"]));
       }
     } else if (child.type === "then") {
       // 'then' already consumed

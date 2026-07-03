@@ -52,6 +52,11 @@ const printers: Record<string, Printer<ASTNode>> = {
   "modelica-ast": {
     print: printModelica,
     embed: embedHTML,
+    // Restrict Prettier's AST traversal (used by the embed preprocessing) to
+    // actual child nodes. Without this, Prettier visits every enumerable
+    // property of every node — including `_syntaxNode`, which drags the
+    // traversal into the native tree-sitter tree and slows formatting ~40x.
+    getVisitorKeys: () => ["children"],
   },
 };
 

@@ -160,6 +160,16 @@ export function printClassModification(
             path.call(print, "children", argListIndex, "children", i),
           );
         }
+        // A component declaration's modifier (e.g. `coiHeaPre(...)` inside a
+        // choice redeclare) breaks after the open paren like any class
+        // modification; the enclosing choice already provides the indent.
+        const grandparent = path.getParentNode(1);
+        if (
+          parent?.type === "modification" &&
+          grandparent?.type === "declaration"
+        ) {
+          return group(["(", softline, join([",", line], elementArgs), ")"]);
+        }
         return group(["(", indent(join([",", line], elementArgs)), ")"]);
       }
 

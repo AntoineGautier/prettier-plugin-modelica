@@ -186,8 +186,8 @@ package Air
     Modelica.Units.NonSI.Temperature_degC T_degC =
       Modelica.Units.Conversions.to_degC(T)
       "Temperature of medium in [degC]";
-    Modelica.Units.NonSI.Pressure_bar p_bar =
-      Modelica.Units.Conversions.to_bar(p)
+    Modelica.Units.NonSI.Pressure_bar p_bar = Modelica.Units.Conversions.to_bar(
+      p)
       "Absolute pressure of medium in [bar]";
 
     // Local connector definition, used for equation balancing check

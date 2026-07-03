@@ -20,8 +20,8 @@ block TimeTable
     each final quantity="Time",
     each final unit="s") = timeScale * table[1:end, 1]
     "Time stamps";
-  final parameter Integer val[:, :] =
-    integer(table[1:end, 2:end] + ones(nT, nout) * Constants.small)
+  final parameter Integer val[:, :] = integer(
+    table[1:end, 2:end] + ones(nT, nout) * Constants.small)
     "Table values as Integer";
   Integer idx(fixed=false) "Index for table lookup";
 

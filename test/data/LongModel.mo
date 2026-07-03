@@ -19,7 +19,7 @@ model AirToWater
   // The check valve pressure drop is scaled for configurations with common dedicated CHW and HW pumps.
   final parameter Modelica.Units.SI.PressureDifference dpValCheHeaWat_nominal =
     dat.dpValCheHeaWat_nominal *
-      (hp.mHeaWatHp_flow_nominal / max(dat.pumHeaWatPri.m_flow_nominal)) ^ 2
+    (hp.mHeaWatHp_flow_nominal / max(dat.pumHeaWatPri.m_flow_nominal)) ^ 2
     "Primary HW pump check valve pressure drop at design HW flow rate";
   final parameter Real yPumHeaWatPriSet(
     final fixed=false,

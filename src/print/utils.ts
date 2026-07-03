@@ -125,6 +125,19 @@ export function formatAssignmentRhs(rhsDoc: Doc): Doc {
 }
 
 /**
+ * Fluid variant of formatAssignmentRhs for declaration binding equations.
+ *
+ * The group only spans ` =` and the line, so its fits check measures the
+ * value up to the value's own first break point. The value is glued after
+ * ` = ` and breaks naturally inside whenever its first chunk fits; only when
+ * that chunk would overflow does the line break after ` =` and the value
+ * start on its own indented line.
+ */
+export function formatFluidAssignmentRhs(rhsDoc: Doc): Doc {
+  return [group([" =", indent(line)]), rhsDoc];
+}
+
+/**
  * Formats an assignment without spaces around `=` but with line-break behavior.
  * Pattern: `=value`
  */

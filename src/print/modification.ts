@@ -14,7 +14,7 @@ import {
   join,
   fill,
   conditionalGroup,
-  formatAssignmentRhs,
+  formatFluidAssignmentRhs,
   printAtPosition,
   isInsideAnnotation,
   isChoicesLevel,
@@ -48,10 +48,12 @@ export function printModification(
     ) {
       const idx = i;
       if (isTopLevelAssignment) {
-        // ` = ` breaks all-or-nothing, so a breaking value starts its line.
+        // Fluid: the value stays glued after ` = ` and breaks naturally
+        // inside; ` = ` only breaks when the value's first chunk would
+        // overflow the line.
         parts.push(
-          formatAssignmentRhs(
-            printAtPosition("line-start", () =>
+          formatFluidAssignmentRhs(
+            printAtPosition("mid-line", () =>
               path.call(print, "children", idx),
             ),
           ),

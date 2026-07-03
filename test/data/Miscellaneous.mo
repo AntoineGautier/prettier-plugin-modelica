@@ -1,7 +1,14 @@
 within;
 model Miscellaneous
-  final parameter Integer nAltHp(final min=0) =
-    if have_hp and not have_php
+  parameter Modelica.Units.SI.PressureDifference dpPumChiWat_nominal(
+    final min=0,
+    displayUnit="Pa") = 1.1 * (dpChiWatSet_max + max(
+    dpEvaChi_nominal + chi.valEva.dpValve_nominal,
+    dpEvaChiHea_nominal + max(chiHea.valEva.dpValve_nominal) + sum(
+      chiHea.valEvaSwi.dpValve_nominal)))
+    "Design head of CHW pump(each unit)"
+    annotation(Dialog(group="CHW loop and cooling-only chillers"));
+  final parameter Integer nAltHp(final min=0) = if have_hp and not have_php
     then (if nHp == 1
       then 1
       else max(
@@ -79,22 +86,22 @@ model Miscellaneous
     annotation(Placement(transformation(extent={{170,150},{150,170}})));
   final parameter Modelica.Units.SI.HeatFlowRate QChg_flow_nominal =
     eps_nominal * min(
-      {mLiq_flow_nominal * cpLiq_nominal,
-        mAir_flow_nominal * cpTestAirChg_nominal}) * (TLiqEntChg_nominal -
-      TAirEntChg_nominal);
+    {mLiq_flow_nominal * cpLiq_nominal,
+      mAir_flow_nominal * cpTestAirChg_nominal}) * (TLiqEntChg_nominal -
+    TAirEntChg_nominal);
   final parameter Modelica.Units.SI.HeatFlowRate Q_flow_nominal =
     (MediumLiq.specificEnthalpy_pTX(
-      MediumLiq.p_default, TLiqEnt_nominal, X=MediumLiq.X_default) -
-      MediumLiq.specificEnthalpy_pTX(
-        MediumLiq.p_default, TLiqLvg_nominal, X=MediumLiq.X_default) +
-      mLiq_flow_nominal - MediumLiq.specificEnthalpy_pTX(
-        MediumLiq.p_default, TLiqLvg_nominal, X=MediumLiq.X_default)) *
-      mLiq_flow_nominal - MediumLiq.specificEnthalpy_pTX(
-        specificEnthalpy_pTX(
-          MediumLiq.p_default, TLiqLvg_nominal, X=MediumLiq.X_default),
-        MediumLiq.p_default,
-        TLiqLvg_nominal,
-        X=MediumLiq.X_default)
+    MediumLiq.p_default, TLiqEnt_nominal, X=MediumLiq.X_default) -
+    MediumLiq.specificEnthalpy_pTX(
+      MediumLiq.p_default, TLiqLvg_nominal, X=MediumLiq.X_default) +
+    mLiq_flow_nominal - MediumLiq.specificEnthalpy_pTX(
+      MediumLiq.p_default, TLiqLvg_nominal, X=MediumLiq.X_default)) *
+    mLiq_flow_nominal - MediumLiq.specificEnthalpy_pTX(
+      specificEnthalpy_pTX(
+        MediumLiq.p_default, TLiqLvg_nominal, X=MediumLiq.X_default),
+      MediumLiq.p_default,
+      TLiqLvg_nominal,
+      X=MediumLiq.X_default)
     "Transmitted heat flow rate at design conditions";
   Buildings.Controls.OBC.CDL.Interfaces.BooleanInput u1PumHeaWatPri_actual[nEnaHeaWat +
     nEnaHeaWat](each start=false)

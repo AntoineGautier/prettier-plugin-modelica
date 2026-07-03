@@ -1,8 +1,8 @@
 within;
 block IfThenElse
   parameter Real x = if true then 1 elseif false then 0 else 0000000000000000;
-  final parameter Real x =
-    if true then 1 elseif false then 0 else 000000000000000000;
+  final parameter Real x = if true
+    then 1 elseif false then 0 else 000000000000000000;
   final parameter Modelica.Units.SI.PressureDifference dpValCheChiWat_nominal =
     if have_chiWat
     then (if typPumChiWatPri ==
@@ -12,22 +12,20 @@ block IfThenElse
       else dat.dpValCheChiWat_nominal)
     else 0
     "Primary (CHW or common HW and CHW) pump check valve pressure drop at design CHW flow rate";
-  final parameter Modelica.Units.SI.Temperature TChiWatRet_nominal =
-    if is_rev
+  final parameter Modelica.Units.SI.Temperature TChiWatRet_nominal = if is_rev
     then TChiWatSup_nominal - QCoo_flow_nominal / cpChiWat_default /
       mChiWat_flow_nominal
     else Buildings.Templates.Data.Defaults.TChiWatRet
     "CHW return temperature - Each heat pump"
     annotation(Dialog(group="Nominal condition"));
-  parameter Modelica.Units.SI.Temperature TLiqLvg_nominal =
-    TLiqEnt_nominal + (if typ ==
-      Buildings.Fluid.HydronicConfigurations.Types.Control.Heating
+  parameter Modelica.Units.SI.Temperature TLiqLvg_nominal = TLiqEnt_nominal +
+    (if typ == Buildings.Fluid.HydronicConfigurations.Types.Control.Heating
       then -10 else +5)
     "Liquid leaving temperature at design conditions";
   final parameter Modelica.Units.SI.PressureDifference dpBalHeaWatHp_nominal =
     if is_dpBalYPumSetCal
-      and typPumHeaWatPri ==
-        Buildings.Templates.Plants.HeatPumps.Types.PumpsPrimary.Constant
+    and typPumHeaWatPri ==
+      Buildings.Templates.Plants.HeatPumps.Types.PumpsPrimary.Constant
     then Buildings.Templates.Utilities.computeBalancingPressureDrop(
       m_flow_nominal=hp.mHeaWatHp_flow_nominal,
       dp_nominal=hp.dpHeaWatHp_nominal + max(valIso.dpValveHeaWat_nominal) *
@@ -41,14 +39,14 @@ block IfThenElse
     "HP HW balancing valve pressure drop at design HW flow";
   final parameter Modelica.Units.SI.PressureDifference dpBalChiWatHp_nominal =
     if is_dpBalYPumSetCal
-      and (typPumChiWatPri ==
-        Buildings.Templates.Plants.HeatPumps.Types.PumpsPrimary.Constant
-        or have_chiWat
-          and not have_pumChiWatPriDed
-          and typPumHeaWatPri ==
-            Buildings.Templates.Plants.HeatPumps.Types.PumpsPrimary.Constant
-        or typPumHeaWatPri ==
-          Buildings.Templates.Plants.HeatPumps.Types.PumpsPrimary.Constant)
+    and (typPumChiWatPri ==
+      Buildings.Templates.Plants.HeatPumps.Types.PumpsPrimary.Constant
+      or have_chiWat
+        and not have_pumChiWatPriDed
+        and typPumHeaWatPri ==
+          Buildings.Templates.Plants.HeatPumps.Types.PumpsPrimary.Constant
+      or typPumHeaWatPri ==
+        Buildings.Templates.Plants.HeatPumps.Types.PumpsPrimary.Constant)
     then Buildings.Templates.Utilities.computeBalancingPressureDrop(
       m_flow_nominal=hp.mChiWatHp_flow_nominal,
       dp_nominal=hp.dpChiWatHp_nominal + max(

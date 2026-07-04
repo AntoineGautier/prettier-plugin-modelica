@@ -6,16 +6,13 @@
 import Parser from "tree-sitter";
 import * as fs from "fs";
 import * as path from "path";
-import { createRequire } from "module";
-
-// Import the Modelica language grammar
-// The grammar is a CommonJS module, so we need createRequire in ESM context
-const require = createRequire(import.meta.url);
-const ModelicaGrammar = require("tree-sitter-modelica");
+import ModelicaGrammar from "tree-sitter-modelica";
 
 // Initialize the parser with the Modelica language
+// Cast needed: this grammar's native binding predates tree-sitter@0.25's
+// `name` field on Language, but Parser.setLanguage doesn't use it at runtime.
 const parser = new Parser();
-parser.setLanguage(ModelicaGrammar);
+parser.setLanguage(ModelicaGrammar as unknown as Parser.Language);
 
 /**
  * Position in source code

@@ -16,6 +16,7 @@ import {
   conditionalGroup,
   formatFluidAssignmentRhs,
   printAtPosition,
+  printWithSkewGroup,
   isInsideAnnotation,
   isChoicesLevel,
   isInsideChoicesAnnotation,
@@ -50,12 +51,18 @@ export function printModification(
       if (isTopLevelAssignment) {
         // Fluid: the value stays glued after ` = ` and breaks naturally
         // inside; ` = ` only breaks when the value's first chunk would
-        // overflow the line.
+        // overflow the line. The skew group lets first-line argument lists
+        // compensate for the value's skewed indentation state (see
+        // formatFluidAssignmentRhs).
+        const skewGroupId = Symbol("fluid-assign");
         parts.push(
           formatFluidAssignmentRhs(
             printAtPosition("mid-line", () =>
-              path.call(print, "children", idx),
+              printWithSkewGroup(skewGroupId, () =>
+                path.call(print, "children", idx),
+              ),
             ),
+            skewGroupId,
           ),
         );
       } else {

@@ -14,6 +14,8 @@ import {
   join,
   fill,
   ifBreak,
+  indentIfBreak,
+  currentSkewGroup,
   isInsideAnnotation,
   isGraphicalPrimitive,
   isFirstLevelAnnotationAttribute,
@@ -191,8 +193,17 @@ export function printFunctionCallArgs(
 
   if (allArgs.length === 0) return "()";
 
+  // A call opening on the first line of a broken binding value sits two
+  // columns right of the indentation state (see formatFluidAssignmentRhs);
+  // without compensation its broken argument list would land flush with the
+  // call's own line. indentIfBreak adds the missing level exactly when the
+  // ` =` group broke.
+  const skewGroupId = currentSkewGroup();
+  const compensateSkew = (d: Doc): Doc =>
+    skewGroupId ? indentIfBreak(d, { groupId: skewGroupId }) : d;
+
   if (allArgs.length === 1) {
-    return group(["(", indent([softline, allArgs[0]]), ")"]);
+    return group(["(", compensateSkew(indent([softline, allArgs[0]])), ")"]);
   }
 
   // Multiple arguments - three formatting options using nested ifBreak:
@@ -205,7 +216,7 @@ export function printFunctionCallArgs(
   // - Inner ifBreak: if outer broke, decides whether args inline or separate lines
   return group([
     "(",
-    indent([
+    compensateSkew(indent([
       ifBreak(
         // When outer breaks - line and inner ifBreak for args
         [
@@ -220,7 +231,7 @@ export function printFunctionCallArgs(
         // When outer doesn't break - softline and inline args
         [softline, join(", ", allArgs)]
       )
-    ]),
+    ])),
     ")"
   ]);
 }

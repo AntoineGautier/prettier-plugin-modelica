@@ -86,13 +86,19 @@ const positionStack: ExprPosition[] = [];
 
 /**
  * Prints a subexpression with the given position context.
+ *
+ * Also clears the skew group: repositioned subexpressions (a broken-off
+ * operand, an argument on its own line) start at a column that matches the
+ * indentation state again, so first-line compensation must not reach them.
  */
 export function printAtPosition<T>(position: ExprPosition, print: () => T): T {
   positionStack.push(position);
+  skewGroupStack.push(undefined);
   try {
     return print();
   } finally {
     positionStack.pop();
+    skewGroupStack.pop();
   }
 }
 
@@ -102,6 +108,40 @@ export function printAtPosition<T>(position: ExprPosition, print: () => T): T {
  */
 export function currentPosition(): ExprPosition {
   return positionStack[positionStack.length - 1] ?? "mid-line";
+}
+
+/**
+ * Skew group context. A fluid binding value keeps the declaration's
+ * indentation state even when the ` =` group breaks and the value starts its
+ * own line two columns further right (see formatFluidAssignmentRhs). That
+ * skew is wanted for self-indenting constructs — chain continuations and if
+ * clauses land flush with the value's first line — but an argument list
+ * opening on that first line would break flush with its own call. Printers
+ * of such constructs read the group id here and wrap their indent in
+ * indentIfBreak on it, adding the missing level exactly when the ` =` group
+ * broke. The context survives only plain pass-through prints (expression
+ * wrappers, parentheses, a chain's first operand), i.e. content that can
+ * still be on the value's first line; printAtPosition clears it.
+ */
+const skewGroupStack: (symbol | undefined)[] = [];
+
+/**
+ * Prints a subexpression with the given skew group in scope.
+ */
+export function printWithSkewGroup<T>(groupId: symbol, print: () => T): T {
+  skewGroupStack.push(groupId);
+  try {
+    return print();
+  } finally {
+    skewGroupStack.pop();
+  }
+}
+
+/**
+ * Skew group set by the nearest enclosing fluid assignment, if any.
+ */
+export function currentSkewGroup(): symbol | undefined {
+  return skewGroupStack[skewGroupStack.length - 1];
 }
 
 /**
@@ -132,9 +172,20 @@ export function formatAssignmentRhs(rhsDoc: Doc): Doc {
  * ` = ` and breaks naturally inside whenever its first chunk fits; only when
  * that chunk would overflow does the line break after ` =` and the value
  * start on its own indented line.
+ *
+ * The value doc stays outside the indent on purpose: its indentation state
+ * remains at the declaration's level even when the value starts its own line
+ * two columns further right. Self-indenting constructs (arithmetic chain
+ * continuations, if clauses) then land flush with the value's first line.
+ * Constructs that would break flush with their own opener because of this
+ * skew (argument lists opening on the value's first line) compensate via the
+ * group id — see currentSkewGroup.
  */
-export function formatFluidAssignmentRhs(rhsDoc: Doc): Doc {
-  return [group([" =", indent(line)]), rhsDoc];
+export function formatFluidAssignmentRhs(rhsDoc: Doc, groupId?: symbol): Doc {
+  return [
+    group([" =", indent(line)], groupId ? { id: groupId } : undefined),
+    rhsDoc,
+  ];
 }
 
 /**

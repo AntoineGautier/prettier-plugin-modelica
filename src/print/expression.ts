@@ -17,6 +17,7 @@ import {
   printChildrenWithSpaces,
   printAtPosition,
   currentPosition,
+  currentSkewGroup,
   formatBinaryRhs,
   type PrintFn,
 } from "./utils.js";
@@ -508,7 +509,11 @@ export function printBinaryExpression(
       // from the chain's base level. When the preceding segment did not
       // break (or hugged instead, leaving its id group unprinted),
       // indentIfBreak resolves to no indent and the hug keeps the chain's
-      // base level.
+      // base level — unless the chain tops a fluid binding value, whose
+      // first line is skewed two columns right of the state (see
+      // currentSkewGroup): a first-line hug then compensates on the fluid
+      // group instead.
+      const skewGroupId = currentSkewGroup();
       const exprParts: Doc[] = [operands[0]];
       let prevBreakGroupId: symbol | undefined;
 
@@ -525,6 +530,7 @@ export function printBinaryExpression(
           // zero-width marker registers it as flat in the states that keep
           // the operand on the current line.
           const flatMarker = group("", { id: breakGroupId });
+          const hugIndentGroupId = prevBreakGroupId ?? skewGroupId;
           exprParts.push(
             conditionalGroup([
               // Option 1: all inline
@@ -535,8 +541,8 @@ export function printBinaryExpression(
                 " ",
                 ops[i],
                 " ",
-                prevBreakGroupId
-                  ? indentIfBreak(hug, { groupId: prevBreakGroupId })
+                hugIndentGroupId
+                  ? indentIfBreak(hug, { groupId: hugIndentGroupId })
                   : hug,
               ],
               // Option 3: break before the operand

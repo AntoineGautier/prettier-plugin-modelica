@@ -138,8 +138,7 @@ algorithm
     // a is constraining Z since eps is not defined for Z=1.
     a := smooth(
       1,
-      if Z < 0.97
-        then Z
+      if Z < 0.97 then Z
         else Buildings.Utilities.Math.Functions.smoothMin(
           x1=Z, x2=0.98, deltaX=0.01));
     // Symbolic conversion of degC to Kelvin

@@ -2,8 +2,8 @@ within;
 model NestedIfInParenTest
   // Test case 1: Nested if with comparison inside parenthesized expression in then clause
   parameter Real x = if condition1
-    then (if variable == SomePackage.SomeModule.SomeType.SomeValue
-      then result1 else result2)
+    then (if variable == SomePackage.SomeModule.SomeType.SomeValue then result1
+      else result2)
     else fallback;
   // Test case 2: Multiple levels of nesting
   parameter Real y = if outer_condition

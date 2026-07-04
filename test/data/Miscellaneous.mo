@@ -9,12 +9,11 @@ model Miscellaneous
     "Design head of CHW pump(each unit)"
     annotation(Dialog(group="CHW loop and cooling-only chillers"));
   final parameter Integer nAltHp(final min=0) = if have_hp and not have_php
-    then (if nHp == 1
-      then 1
+    then (if nHp == 1 then 1
       else max(
         {sum(
-          {(if staHp[i, j] > 0 and staHp[i, j] < 1
-            then 1 else 0) for j in 1:nHp}) for i in 1:nStaHp}))
+          {(if staHp[i, j] > 0 and staHp[i, j] < 1 then 1
+            else 0) for j in 1:nHp}) for i in 1:nStaHp}))
     else nHp
     "Number of lead/lag alternate heat pumps"
     annotation(Evaluate=true);

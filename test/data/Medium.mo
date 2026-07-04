@@ -162,14 +162,14 @@ package Air
     InputMassFraction [1] Xi(
       start=reference_X[1:1],
       nominal={0.01},
-      each stateSelect=if preferredMediumStates
-        then StateSelect.prefer else StateSelect.default)
+      each stateSelect=if preferredMediumStates then StateSelect.prefer
+        else StateSelect.default)
       "Structurally independent mass fractions";
     InputSpecificEnthalpy h "Specific enthalpy of medium";
     Modelica.Media.Interfaces.Types.Density d "Density of medium";
     Modelica.Media.Interfaces.Types.Temperature T(
-      stateSelect=if preferredMediumStates
-        then StateSelect.prefer else StateSelect.default)
+      stateSelect=if preferredMediumStates then StateSelect.prefer
+        else StateSelect.default)
       "Temperature of medium";
     Modelica.Media.Interfaces.Types.MassFraction [2] X(
       start=reference_X,
@@ -727,8 +727,7 @@ as required from medium model \"Buildings.Media.Air\".");
   redeclare function extends setState_pTX
     "Return thermodynamic state as function of p, T and composition X or Xi"
   algorithm
-    state := if size(X, 1) == nX
-      then ThermodynamicState(p=p, T=T, X=X)
+    state := if size(X, 1) == nX then ThermodynamicState(p=p, T=T, X=X)
       else ThermodynamicState(p=p, T=T, X=cat(1, X, {1 - sum(X)}));
   annotation(smoothOrder=2,
     Inline=true,

@@ -1,8 +1,8 @@
 within;
 block IfThenElse
   parameter Real x = if true then 1 elseif false then 0 else 0000000000000000;
-  final parameter Real x = if true
-    then 1 elseif false then 0 else 000000000000000000;
+  final parameter Real x = if true then 1 elseif false then 0
+    else 000000000000000000;
   final parameter Modelica.Units.SI.PressureDifference dpValCheChiWat_nominal =
     if have_chiWat
     then (if typPumChiWatPri ==
@@ -29,8 +29,8 @@ block IfThenElse
     then Buildings.Templates.Utilities.computeBalancingPressureDrop(
       m_flow_nominal=hp.mHeaWatHp_flow_nominal,
       dp_nominal=hp.dpHeaWatHp_nominal + max(valIso.dpValveHeaWat_nominal) *
-        ((if have_valHpInlIso then 1 else 0) + (if have_valHpOutIso
-          then 1 else 0)) + dpValCheHeaWat_nominal,
+        ((if have_valHpInlIso then 1 else 0) + (if have_valHpOutIso then 1
+          else 0)) + dpValCheHeaWat_nominal,
       datPum=dat.pumHeaWatPriSin[1])
     elseif not is_dpBalYPumSetCal or is_dpBalYPumSetCal
     then Buildings.Templates.Utilities.computeBalancingPressureDrop(
@@ -142,8 +142,8 @@ equation
     entryTime = pre(entryTime);
     passed = false;
   end when;
-  y = if u
-    then time - entryTdedzjedlkedjlkjdlkejdjlkdjlime + dekdcejdlkjlk else 0.0;
+  y = if u then time - entryTdedzjedlkedjlkjdlkejdjlkdjlime + dekdcejdlkjlk
+    else 0.0;
   // From TwoWayPressureIndependent valve model
   m_flow_set = m_flow_nominal * phi;
   dp_min = Buildings.Fluid.BaseClasses.FlowModels.basicFlowFunction_m_flow(
@@ -162,10 +162,7 @@ equation
     m_flow_smooth = noEvent(
       smooth(
         2,
-        if dp_x <= dp_x1
-          then m_flow_y1
-          elseif dp_x >= dp_x2
-          then m_flow_y2
+        if dp_x <= dp_x1 then m_flow_y1 elseif dp_x >= dp_x2 then m_flow_y2
           else Buildings.Utilities.Math.Functions.quinticHermite(
             x=dp_x,
             x1=dp_x1,
@@ -199,10 +196,8 @@ equation
     dp_smooth = noEvent(
       smooth(
         2,
-        if m_flow_x <= m_flow_x1
-          then dp_y1
-          elseif m_flow_x >= m_flow_x2
-          then dp_y2
+        if m_flow_x <= m_flow_x1 then dp_y1
+          elseif m_flow_x >= m_flow_x2 then dp_y2
           else Buildings.Utilities.Math.Functions.quinticHermite(
             x=m_flow_x,
             x1=m_flow_x1,

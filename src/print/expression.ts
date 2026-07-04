@@ -92,7 +92,7 @@ export function printIfExpression(
     const child = children[childIdx];
     const idx = childIdx;
     if (child.type === "else_if_clause") {
-      elseIfParts.push(line, path.call(print, "children", idx));
+      elseIfParts.push(path.call(print, "children", idx));
     } else if (child.type !== "then" && child.type !== "else") {
       elseExprDoc = printAtPosition("mid-line", () =>
         path.call(print, "children", idx),
@@ -101,20 +101,46 @@ export function printIfExpression(
     childIdx++;
   }
 
-  const core = group([
-    "then ",
-    thenExprDoc,
-    ...elseIfParts,
-    line,
-    "else ",
-    elseExprDoc,
-  ]);
+  // Greedy clause packing: each conditionalGroup state keeps the longest
+  // prefix of clauses that fits on the current line, hard-breaks, and lays
+  // out the rest by the same rule at the real position. ConditionalGroup fit
+  // checks see the trailing line content (`;`, closing parens) that fill
+  // ignores, stop at the first hardline, and hardlines inside states don't
+  // propagate breaks to enclosing groups.
+  const clauses: Doc[] = [
+    group(["then ", thenExprDoc]),
+    ...elseIfParts.map((doc) => group(doc)),
+    group(["else ", elseExprDoc]),
+  ];
+  const n = clauses.length;
 
-  if (position === "line-start") {
-    return group(["if ", ...conditionParts, line, core]);
+  // tails[i] lays out clauses[i..] starting at a line start
+  const tails: Doc[] = new Array(n);
+  tails[n - 1] = clauses[n - 1];
+  for (let i = n - 2; i >= 0; i--) {
+    const states: Doc[] = [];
+    for (let j = n - 1; j > i; j--) {
+      const prefix = join(" ", clauses.slice(i, j + 1));
+      states.push(j === n - 1 ? prefix : [prefix, hardline, tails[j + 1]]);
+    }
+    states.push([clauses[i], hardline, tails[i + 1]]);
+    tails[i] = conditionalGroup(states);
   }
 
-  return group(["if ", ...conditionParts, indent([line, core])]);
+  // States for the condition's own line: keep k clauses after the condition
+  const coreStates: Doc[] = [];
+  for (let k = n; k >= 1; k--) {
+    const prefix = join(" ", clauses.slice(0, k));
+    coreStates.push(k === n ? [" ", prefix] : [" ", prefix, hardline, tails[k]]);
+  }
+  coreStates.push([hardline, tails[0]]);
+  const core = conditionalGroup(coreStates);
+
+  if (position === "line-start") {
+    return ["if ", ...conditionParts, core];
+  }
+
+  return ["if ", ...conditionParts, indent(core)];
 }
 
 /**

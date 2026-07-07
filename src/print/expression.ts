@@ -737,14 +737,30 @@ export function printLogicalLiteralExpression(
 
 /**
  * Print parenthesized_expression node
+ *
+ * When the parenthesis opens the first line of a broken binding value, that
+ * line sits two columns right of the indentation state (see
+ * formatFluidAssignmentRhs) and the content's continuation lines would land
+ * flush with the `(`; indentIfBreak adds the missing level exactly when the
+ * ` =` group broke. The content prints with the skew cleared (it now
+ * compensates here, one level for the whole parenthesis) in its existing
+ * "mid-line" position — a defined skew group implies the parenthesis was
+ * reached through pass-through prints from the binding value's mid-line
+ * context.
  */
 export function printParenthesizedExpression(
   path: AstPath<ASTNode>,
   _options: object,
   print: PrintFn,
 ): Doc {
-  const content = path.map(print, "children");
-  return group(["(", content, ")"]);
+  const skewGroupId = currentSkewGroup();
+  if (!skewGroupId) {
+    return group(["(", path.map(print, "children"), ")"]);
+  }
+  const content = printAtPosition("mid-line", () =>
+    path.map(print, "children"),
+  );
+  return group(["(", indentIfBreak(content, { groupId: skewGroupId }), ")"]);
 }
 
 /**

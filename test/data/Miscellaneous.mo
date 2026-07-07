@@ -1,5 +1,17 @@
 within;
 model Miscellaneous
+  final parameter Modelica.Units.SI.MassFlowRate mPumHeaWatPriDed_flow_nominal[cfg.nPumHeaWatPri] =
+    {if i <= cfg.nHp
+      then (if cfg.have_pumChiWatPriDedHp then hp.mHeaWatHp_flow_nominal
+        else max(hp.mHeaWatHp_flow_nominal, hp.mChiWatHp_flow_nominal))
+      else hp.mHeaWatPhp_flow_nominal for i in 1:cfg.nPumHeaWatPri}
+    "Dedicated primary HW pump mass flow rate";
+  final parameter Modelica.Units.SI.MassFlowRate mPumHeaWatPriDed_flow_nominal =
+    (if cfg
+      then (if cfg then have_pumChiWatPriDedHp
+        else max(hp.mHeaWatHp_flow_nominal, hp.mChiWatHp_flow_nominal))
+      else mHeaWatPhp_flow_nominal)
+    "Dedicated primary HW pump mass flow rate";
   parameter Modelica.Units.SI.PressureDifference dpPumChiWat_nominal(
     final min=0,
     displayUnit="Pa") = 1.1 * (dpChiWatSet_max + max(
@@ -91,10 +103,10 @@ model Miscellaneous
   final parameter Modelica.Units.SI.HeatFlowRate Q_flow_nominal =
     (MediumLiq.specificEnthalpy_pTX(
       MediumLiq.p_default, TLiqEnt_nominal, X=MediumLiq.X_default) -
-    MediumLiq.specificEnthalpy_pTX(
-      MediumLiq.p_default, TLiqLvg_nominal, X=MediumLiq.X_default) +
-    mLiq_flow_nominal - MediumLiq.specificEnthalpy_pTX(
-      MediumLiq.p_default, TLiqLvg_nominal, X=MediumLiq.X_default)) *
+      MediumLiq.specificEnthalpy_pTX(
+        MediumLiq.p_default, TLiqLvg_nominal, X=MediumLiq.X_default) +
+      mLiq_flow_nominal - MediumLiq.specificEnthalpy_pTX(
+        MediumLiq.p_default, TLiqLvg_nominal, X=MediumLiq.X_default)) *
     mLiq_flow_nominal - MediumLiq.specificEnthalpy_pTX(
       specificEnthalpy_pTX(
         MediumLiq.p_default, TLiqLvg_nominal, X=MediumLiq.X_default),

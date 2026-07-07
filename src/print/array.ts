@@ -12,6 +12,8 @@ import {
   softline,
   hardline,
   join,
+  indentIfBreak,
+  currentSkewGroup,
   isInsideAnnotation,
   isCoordinateArray,
   isGraphicsArray,
@@ -171,6 +173,14 @@ export function printArrayConcatenation(
 
 /**
  * Print array_comprehension node
+ *
+ * The body follows the `{`, so it prints in "mid-line" position: its
+ * continuation lines indent relative to the line the `{` starts on. When the
+ * comprehension opens the first line of a broken binding value, that line
+ * sits two columns right of the indentation state (see
+ * formatFluidAssignmentRhs) and the body's continuation lines would land
+ * flush with the `{`; indentIfBreak adds the missing level exactly when the
+ * ` =` group broke.
  */
 export function printArrayComprehension(
   path: AstPath<ASTNode>,
@@ -178,21 +188,28 @@ export function printArrayComprehension(
   print: PrintFn,
 ): Doc {
   const node = path.getValue();
-  const parts: Doc[] = ["{"];
+  const skewGroupId = currentSkewGroup();
+  const content: Doc[] = [];
 
   for (let i = 0; i < node.children.length; i++) {
     const child = node.children[i];
+    const idx = i;
     if (child.type === "for") {
       // Skip - we add "for" manually with for_indices
     } else if (child.type === "for_indices") {
-      parts.push(" for ", path.call(print, "children", i));
+      content.push(" for ", path.call(print, "children", idx));
     } else {
-      parts.push(path.call(print, "children", i));
+      content.push(
+        printAtPosition("mid-line", () => path.call(print, "children", idx)),
+      );
     }
   }
 
-  parts.push("}");
-  return parts;
+  return [
+    "{",
+    skewGroupId ? indentIfBreak(content, { groupId: skewGroupId }) : content,
+    "}",
+  ];
 }
 
 /**

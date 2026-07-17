@@ -513,6 +513,32 @@ export function onSameLine(a: ASTNode, b: ASTNode): boolean {
 }
 
 /**
+ * Print list children joined by hardlines, keeping a comment on the same
+ * line as the preceding sibling when it appeared there in the source.
+ * Used for equation_list and statement_list, where a trailing comment
+ * after `;` is parsed as a sibling of the equation/statement it follows.
+ */
+export function printListWithInlineComments(
+  path: AstPath<ASTNode>,
+  print: PrintFn,
+): Doc {
+  const node = path.getValue();
+  const parts: Doc[] = [];
+  for (let i = 0; i < node.children.length; i++) {
+    const child = node.children[i];
+    const inline =
+      i > 0 &&
+      isComment(child) &&
+      child.range.start.row === node.children[i - 1].range.end.row;
+    if (i > 0) {
+      parts.push(inline ? " " : hardline);
+    }
+    parts.push(path.call(print, "children", i));
+  }
+  return parts;
+}
+
+/**
  * Get the name of a function application or element modification
  */
 export function getAnnotationElementName(node: ASTNode): string | null {

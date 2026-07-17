@@ -88,6 +88,176 @@ block IfThenElse
       rotation=0,
       origin={180,0})));
 initial equation
+equation
+  // Calculation of pump speed providing design flow
+  if have_heaWat then
+    if typArrPumPri ==
+      Buildings.Templates.Components.Types.PumpArrangement.Dedicated
+    then
+      yPumHeaWatPriHdrSet = 0; // Not used
+      if have_hp then
+        if is_yPumSetCal then
+          0 = Buildings.Templates.Utilities.computeBalancingPressureDrop(
+            V_flow_nominal=VHeaWatBalHp_nominal,
+            dp_nominal=max(valIso.dpHeaWat_nominal[1:nHp]) +
+              dpValCheHeaWatBalHp_nominal + dpHeaWatLooBal_nominal,
+            prePum=prePumHeaWatBalHp,
+            r_N=yPumHeaWatPriDedHpSet);
+          assert(
+            yPumHeaWatPriDedHpSet >= 0.1 and yPumHeaWatPriDedHpSet <= 2,
+            "In " + getInstanceName() + ": " +
+              "The calculated primary pump speed to provide the design HW flow is out of bounds, " +
+              "indicating that the primary pump curve needs to be revised.");
+        else // Pump speed not calculated: assign value from data record
+          yPumHeaWatPriDedHpSet = dat.ctl.yPumHeaWatPriDedHpSet;
+        end if;
+      else // No HP
+        yPumHeaWatPriDedHpSet = 0; // Not used
+      end if;
+      if have_php then
+        if is_yPumSetCal then
+          0 = Buildings.Templates.Utilities.computeBalancingPressureDrop(
+            V_flow_nominal=VHeaWatBalPhp_nominal,
+            dp_nominal=max(valIso.dpHeaWat_nominal[nHp + 1:nHp + nPhp]) +
+              dpValCheHeaWatBalPhp_nominal + dpHeaWatLooBal_nominal,
+            prePum=prePumHeaWatBalPhp,
+            r_N=yPumHeaWatPriDedPhpSet);
+          assert(
+            yPumHeaWatPriDedPhpSet >= 0.1 and yPumHeaWatPriDedPhpSet <= 2,
+            "In " + getInstanceName() + ": " +
+              "The calculated primary pump speed to provide the polyvalent HP design HW flow is out of bounds, " +
+              "indicating that the primary pump curve needs to be revised.");
+        else // Pump speed not calculated: assign value from data record
+          yPumHeaWatPriDedPhpSet = dat.ctl.yPumHeaWatPriDedPhpSet;
+        end if;
+      else // No polyvalent HP
+        yPumHeaWatPriDedPhpSet = 0; // Not used
+      end if;
+    else // Headered pumps
+      yPumHeaWatPriDedHpSet = 0; // Not used
+      yPumHeaWatPriDedPhpSet = 0; // Not used
+      if is_yPumSetCal then
+        0 = Buildings.Templates.Utilities.computeBalancingPressureDrop(
+          V_flow_nominal=VHeaWatBalHdr_nominal,
+          dp_nominal=max(valIso.dpHeaWat_nominal) +
+            dpValCheHeaWatBalHdr_nominal + dpHeaWatLooBal_nominal,
+          prePum=prePumHeaWatBalHdr,
+          r_N=yPumHeaWatPriHdrSet);
+        assert(
+          yPumHeaWatPriHdrSet >= 0.1 and yPumHeaWatPriHdrSet <= 2,
+          "In " + getInstanceName() + ": " +
+            "The calculated primary pump speed to provide the design HW flow is out of bounds, " +
+            "indicating that the primary pump curve needs to be revised.");
+      else // Pump speed not calculated: assign value from data record
+        yPumHeaWatPriHdrSet = dat.ctl.yPumHeaWatPriHdrSet;
+      end if;
+    end if;
+  else // No HW circuit
+    yPumHeaWatPriHdrSet = 0; // Not used
+    yPumHeaWatPriDedHpSet = 0; // Not used
+    yPumHeaWatPriDedPhpSet = 0; // Not used
+  end if;
+  if have_chiWat then
+    if typArrPumPri ==
+      Buildings.Templates.Components.Types.PumpArrangement.Dedicated
+    then
+      yPumChiWatPriHdrSet = 0; // Not used
+      if have_hp then
+        if is_yPumSetCal then
+          0 = Buildings.Templates.Utilities.computeBalancingPressureDrop(
+            V_flow_nominal=VChiWatBalHp_nominal,
+            dp_nominal=max(valIso.dpChiWat_nominal[1:nHp]) +
+              dpValCheChiWatBalHp_nominal + dpChiWatLooBal_nominal,
+            prePum=prePumChiWatBalHp,
+            r_N=yPumChiWatPriDedHpSet);
+          assert(
+            yPumChiWatPriDedHpSet >= 0.1 and yPumChiWatPriDedHpSet <= 2,
+            "In " + getInstanceName() + ": " +
+              "The calculated primary pump speed to provide the HP design CHW flow is out of bounds, " +
+              "indicating that the primary pump curve needs to be revised.");
+        else // Pump speed not calculated: assign value from data record
+          yPumChiWatPriDedHpSet = dat.ctl.yPumChiWatPriDedHpSet;
+        end if;
+      else // No HP
+        yPumChiWatPriDedHpSet = 0; // Not used
+      end if;
+      if have_php then
+        if is_yPumSetCal then
+          0 = Buildings.Templates.Utilities.computeBalancingPressureDrop(
+            V_flow_nominal=VChiWatBalPhp_nominal,
+            dp_nominal=max(valIso.dpChiWat_nominal[nHp + 1:nHp + nPhp]) +
+              dpValCheChiWatBalPhp_nominal + dpChiWatLooBal_nominal,
+            prePum=prePumChiWatBalPhp,
+            r_N=yPumChiWatPriDedPhpSet);
+          assert(
+            yPumChiWatPriDedPhpSet >= 0.1 and yPumChiWatPriDedPhpSet <= 2,
+            "In " + getInstanceName() + ": " +
+              "The calculated primary pump speed to provide the polyvalent HP design HW flow is out of bounds, " +
+              "indicating that the primary pump curve needs to be revised.");
+        else // Pump speed not calculated: assign value from data record
+          yPumChiWatPriDedPhpSet = dat.ctl.yPumChiWatPriDedPhpSet;
+        end if;
+      else // NO polyvalent HP
+        yPumChiWatPriDedPhpSet = 0; // Not used
+      end if;
+    else // Headered pumps
+      yPumChiWatPriDedHpSet = 0; // Not used
+      yPumChiWatPriDedPhpSet = 0; // Not used
+      if is_yPumSetCal then
+        0 = Buildings.Templates.Utilities.computeBalancingPressureDrop(
+          V_flow_nominal=VChiWatBalHdr_nominal,
+          dp_nominal=max(valIso.dpChiWat_nominal) +
+            dpValCheChiWatBalHdr_nominal + dpChiWatLooBal_nominal,
+          prePum=prePumChiWatBalHdr,
+          r_N=yPumChiWatPriHdrSet);
+        assert(
+          yPumChiWatPriHdrSet >= 0.1 and yPumChiWatPriHdrSet <= 2,
+          "In " + getInstanceName() + ": " +
+            "The calculated primary pump speed to provide the design HW flow is out of bounds, " +
+            "indicating that the primary pump curve needs to be revised.");
+      else // Pump speed not calculated: assign value from data record
+        yPumChiWatPriHdrSet = dat.ctl.yPumChiWatPriHdrSet;
+      end if;
+    end if;
+  else // No CHW circuit
+    yPumChiWatPriHdrSet = 0; // Not used
+    yPumChiWatPriDedHpSet = 0; // Not used
+    yPumChiWatPriDedPhpSet = 0; // Not used
+  end if;
+  if is_dpBalCal then
+    if have_heaWat then
+      if have_hp then
+        assert(
+          dpBalHeaWatHp_nominal >= 0,
+          "In " + getInstanceName() + ": " +
+            "The calculated pressure drop for the HP HW balancing valve is negative, " +
+            "indicating that the primary pump curve needs to be revised.");
+      end if;
+      if have_php then
+        assert(
+          dpBalHeaWatPhp_nominal >= 0,
+          "In " + getInstanceName() + ": " +
+            "The calculated pressure drop for the polyvalent HP HW balancing valve is negative, " +
+            "indicating that the primary pump curve needs to be revised.");
+      end if;
+    end if;
+    if have_chiWat then
+      if have_hp then
+        assert(
+          dpBalChiWatHp_nominal >= 0,
+          "In " + getInstanceName() + ": " +
+            "The calculated pressure drop for the HP CHW balancing valve is negative, " +
+            "indicating that the primary pump curve needs to be revised.");
+      end if;
+      if have_php then
+        assert(
+          dpBalChiWatPhp_nominal >= 0,
+          "In " + getInstanceName() + ": " +
+            "The calculated pressure drop for the polyvalent HP CHW balancing valve is negative, " +
+            "indicating that the primary pump curve needs to be revised.");
+      end if;
+    end if;
+  end if;
   if is_dpBalYPumSetCal
     and have_chiWat
     and typDis ==

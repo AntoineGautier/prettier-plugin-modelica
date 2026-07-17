@@ -16,6 +16,7 @@ import {
   onSameLine,
   printAtPosition,
   printChildren,
+  printListWithInlineComments,
   type PrintFn,
 } from "./utils.js";
 
@@ -56,7 +57,7 @@ export function printEquationList(
   _options: object,
   print: PrintFn,
 ): Doc {
-  return join(hardline, path.map(print, "children"));
+  return printListWithInlineComments(path, print);
 }
 
 /**

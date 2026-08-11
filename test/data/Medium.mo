@@ -384,8 +384,8 @@ as required from medium model \"Buildings.Media.Air\".");
   redeclare replaceable function extends enthalpyOfGas
     "Enthalpy of gas mixture per unit mass of gas mixture"
   algorithm
-    h := enthalpyOfCondensingGas(T) * X[Water] + enthalpyOfDryAir(T) * (1.0 -
-      X[Water]);
+    h := enthalpyOfCondensingGas(T) * X[Water] +
+      enthalpyOfDryAir(T) * (1.0 - X[Water]);
   annotation(Inline=true);
   end enthalpyOfGas;
 
@@ -530,8 +530,8 @@ as required from medium model \"Buildings.Media.Air\".");
   algorithm
     Y := massToMoleFractions(state.X, {steam.MM, dryair.MM});
     s := specificHeatCapacityCp(state) * Modelica.Math.log(
-      state.T / reference_T) - Modelica.Constants.R * sum(state.X[i] / MMX[i] *
-      Modelica.Math.log(
+      state.T / reference_T) -
+      Modelica.Constants.R * sum(state.X[i] / MMX[i] * Modelica.Math.log(
         max(Y[i], Modelica.Constants.eps) * state.p /
           reference_p) for i in 1:2);
   annotation(Inline=true,
@@ -759,8 +759,9 @@ as required from medium model \"Buildings.Media.Air\".");
     // In this formulation, we can set T to any value when calling
     // specificHeatCapacityCp as cp does not depend on T.
     T := 273.15 * Modelica.Math.exp(
-      (s + Modelica.Constants.R * sum(X_int[i] / MMX[i] * Modelica.Math.log(
-        max(Y[i], Modelica.Constants.eps)) for i in 1:2)) /
+      (s +
+        Modelica.Constants.R * sum(X_int[i] / MMX[i] * Modelica.Math.log(
+          max(Y[i], Modelica.Constants.eps)) for i in 1:2)) /
         specificHeatCapacityCp(setState_pTX(p=p, T=273.15, X=X_int)));
     state := ThermodynamicState(p=p, T=T, X=X_int);
   annotation(Inline=true,
@@ -835,8 +836,8 @@ as required from medium model \"Buildings.Media.Air\".");
   redeclare replaceable function extends specificHelmholtzEnergy
     "Specific Helmholtz energy"
   algorithm
-    f := specificEnthalpy(state) - gasConstant(state) * state.T - state.T *
-      specificEntropy(state);
+    f := specificEnthalpy(state) - gasConstant(state) * state.T -
+      state.T * specificEntropy(state);
   annotation(Inline=true);
   end specificHelmholtzEnergy;
 
@@ -913,8 +914,9 @@ as required from medium model \"Buildings.Media.Air\".");
     input MassFraction [:] X "mass fractions of composition";
     output Temperature T "temperature";
   algorithm
-    T := reference_T + (h - h_fg * X[Water]) / ((1 - X[Water]) * dryair.cp +
-      X[Water] * steam.cp);
+    T := reference_T +
+      (h - h_fg * X[Water]) / ((1 - X[Water]) * dryair.cp +
+        X[Water] * steam.cp);
   annotation(smoothOrder=5,
     Inline=true,
     inverse(h=specificEnthalpy_pTX(p, T, X)),

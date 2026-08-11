@@ -13,8 +13,8 @@ block IfThenElse
     else 0
     "Primary (CHW or common HW and CHW) pump check valve pressure drop at design CHW flow rate";
   final parameter Modelica.Units.SI.Temperature TChiWatRet_nominal = if is_rev
-    then TChiWatSup_nominal - QCoo_flow_nominal / cpChiWat_default /
-      mChiWat_flow_nominal
+    then TChiWatSup_nominal -
+      QCoo_flow_nominal / cpChiWat_default / mChiWat_flow_nominal
     else Buildings.Templates.Data.Defaults.TChiWatRet
     "CHW return temperature - Each heat pump"
     annotation(Dialog(group="Nominal condition"));
@@ -28,9 +28,10 @@ block IfThenElse
       Buildings.Templates.Plants.HeatPumps.Types.PumpsPrimary.Constant
     then Buildings.Templates.Utilities.computeBalancingPressureDrop(
       m_flow_nominal=hp.mHeaWatHp_flow_nominal,
-      dp_nominal=hp.dpHeaWatHp_nominal + max(valIso.dpValveHeaWat_nominal) *
-        ((if have_valHpInlIso then 1 else 0) + (if have_valHpOutIso then 1
-          else 0)) + dpValCheHeaWat_nominal,
+      dp_nominal=hp.dpHeaWatHp_nominal +
+        max(valIso.dpValveHeaWat_nominal) * ((if have_valHpInlIso then 1
+          else 0) + (if have_valHpOutIso then 1 else 0)) /
+          dpValCheHeaWat_nominal,
       datPum=dat.pumHeaWatPriSin[1])
     elseif not is_dpBalYPumSetCal or is_dpBalYPumSetCal
     then Buildings.Templates.Utilities.computeBalancingPressureDrop(
@@ -49,9 +50,9 @@ block IfThenElse
         Buildings.Templates.Plants.HeatPumps.Types.PumpsPrimary.Constant)
     then Buildings.Templates.Utilities.computeBalancingPressureDrop(
       m_flow_nominal=hp.mChiWatHp_flow_nominal,
-      dp_nominal=hp.dpChiWatHp_nominal + max(
-        valIso.dpValveChiWadcdcscsccscezt_nominal) * ((if have_valHpInlIso
-        then 1 else 0) + (if have_valHpOutIso then 1 else 0)) +
+      dp_nominal=hp.dpChiWatHp_nominal +
+        max(valIso.dpValveChiWadcdcscsccscezt_nominal) * ((if have_valHpInlIso
+          then 1 else 0) + (if have_valHpOutIso then 1 else 0)) +
         dpValCheChiWat_nominal,
       datPum=if cfg.typPumChiWatPri ==
         Buildings.Templates.Plants.HeatPumps.Types.PumpsPrimary.Constant

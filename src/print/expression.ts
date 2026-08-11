@@ -426,6 +426,14 @@ export function printBinaryExpression(
       const operandNodes: ASTNode[] = [];
       const ops: string[] = [];
 
+      // Only same-precedence operators join one flat chain: a multiplicative
+      // sub-chain inside an additive chain stays a single operand, so breaks
+      // prefer the additive operators and a product that must break indents
+      // one level deeper than the +/- continuation lines.
+      const topIsAdditive = additiveOperators.includes(operator);
+      const samePrecedence = (op: string): boolean =>
+        additiveOperators.includes(op) === topIsAdditive;
+
       const unwrapToBinary = (n: ASTNode): ASTNode | null => {
         if (n.type === "binary_expression") return n;
         if (n.type === "simple_expression" && n.children?.length === 1) {
@@ -454,7 +462,8 @@ export function printBinaryExpression(
           const innerParts = findBinaryParts(binaryNode);
           if (
             innerParts &&
-            arithmeticOperators.includes(innerParts.operator)
+            arithmeticOperators.includes(innerParts.operator) &&
+            samePrecedence(innerParts.operator)
           ) {
             if (
               n.type === "simple_expression" &&

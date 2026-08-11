@@ -1,5 +1,15 @@
 within;
 model Miscellaneous
+  final parameter Buildings.Templates.Components.Types.Valve typValConWatChiIso =
+    if (typ <> Buildings.Templates.Components.Types.Chiller.WaterCooled
+      or typArrPumConWat ==
+        Buildings.Templates.Components.Types.PumpArrangement.Dedicated)
+    then Buildings.Templates.Components.Types.Valve.None
+    elseif enaTypValConWatChiIso then typValConWatChiIso_select
+    else Buildings.Templates.Components.Types.Valve.TwoWayModulating
+    "Type of chiller CW isolation valve"
+    annotation(Evaluate=true,
+      Dialog(group="Configuration"));
   final parameter Modelica.Units.SI.MassFlowRate mPumHeaWatPriDed_flow_nominal[cfg.nPumHeaWatPri] =
     {if i <= cfg.nHp
       then (if cfg.have_pumChiWatPriDedHp then hp.mHeaWatHp_flow_nominal

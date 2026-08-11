@@ -18,6 +18,7 @@ import {
   printAtPosition,
   currentPosition,
   currentSkewGroup,
+  printWithSkewGroup,
   formatBinaryRhs,
   type PrintFn,
 } from "./utils.js";
@@ -68,10 +69,20 @@ export function printIfExpression(
     }
   };
 
+  // The condition stays glued after `if `, so it can still sit on a fluid
+  // binding value's skewed first line: the skew group survives into it, and
+  // a parenthesized condition compensates one level for its content (see
+  // currentSkewGroup).
+  const skewGroupId = currentSkewGroup();
   if (children[childIdx]) {
     const condIdx = childIdx;
+    const printCondition = () => path.call(print, "children", condIdx);
     conditionParts.push(
-      printAtPosition("mid-line", () => path.call(print, "children", condIdx)),
+      printAtPosition("mid-line", () =>
+        skewGroupId
+          ? printWithSkewGroup(skewGroupId, printCondition)
+          : printCondition(),
+      ),
     );
     childIdx++;
   }

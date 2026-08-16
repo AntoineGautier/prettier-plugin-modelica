@@ -30,14 +30,13 @@ cd "$FORMATTER_DIR"
 
 echo "Running formatter tests..."
 
+# Format all .mo files in-place w/ correctness check, in a single Node process
+# (spawning a fresh node+tsx process per file is the dominant cost otherwise)
+"$FORMATTER_DIR/node_modules/.bin/tsx" "$SCRIPT_DIR/run-tests.ts"
+
 # Find all .mo files not containing '_formatted' in the name
 for file in "$TEST_DIR"/*.mo; do
     filename=$(basename "$file")
-
-    echo "Formatting: $filename"
-
-    # Format inplace w/ correctness check
-    npx tsx src/cli.ts "$TEST_DIR/$filename" --write --check --verbose
 
     # Check that no line has more than +2 spaces compared to previous non-empty line
     if [ "$INDENT_CHECK" = true ]; then

@@ -89,6 +89,10 @@ equation
 end Demo;
 ```
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for commit message conventions and the release process.
+
 ## License
 
 This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**.

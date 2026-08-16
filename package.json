@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "description": "Prettier plugin for Modelica code formatting using tree-sitter",
   "type": "module",
+  "repository": "github:AntoineGautier/prettier-plugin-modelica",
+  "bugs": "https://github.com/AntoineGautier/prettier-plugin-modelica/issues",
+  "homepage": "https://github.com/AntoineGautier/prettier-plugin-modelica#readme",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
@@ -27,7 +30,8 @@
     "format": "node dist/cli.js",
     "parse": "tsx src/cli.ts",
     "test": "npm run build && bash test/run-tests.sh",
-    "test:indentcheck": "npm run build && bash test/run-tests.sh --indent-check"
+    "test:indentcheck": "npm run build && bash test/run-tests.sh --indent-check",
+    "changelog:preview": "commit-and-tag-version --dry-run"
   },
   "keywords": [
     "prettier",
@@ -50,6 +54,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
+    "commit-and-tag-version": "^13.1.2",
     "prettier": "^3.4.2",
     "tsx": "^4.7.0",
     "typescript": "^5.3.3"

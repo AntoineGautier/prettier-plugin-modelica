@@ -1,0 +1,107 @@
+name: Staging Release
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  id-token: write
+
+env:
+  GH_USERNAME: github-actions[bot]
+
+jobs:
+  stage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: "https://registry.npmjs.org"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup tree-sitter-modelica
+        run: npm run setup
+
+      - name: Configure git identity
+        run: |
+          git config user.name "${GH_USERNAME}"
+          git config user.email "${GH_USERNAME}@users.noreply.github.com"
+
+      - name: Create staging branch from current main
+        run: git checkout -B staging HEAD
+
+      - name: Bump version and update changelog
+        id: bump
+        run: |
+          # Tag creation is deferred to the Main Release workflow, so a
+          # rejected staging run never leaves a dangling git tag behind.
+          npx commit-and-tag-version --skip.tag
+          echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Push staging branch
+        run: git push --force origin staging
+
+      - name: Build package
+        run: npm run build
+
+      - name: Publish prerelease to npm for testing
+        id: publish-test
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          # A unique prerelease id (rather than the bare target version) lets
+          # staging be re-run without colliding with an already-published,
+          # immutable npm version string.
+          TEST_VERSION="${{ steps.bump.outputs.version }}-staging.${{ github.run_number }}"
+          npm version "$TEST_VERSION" --no-git-tag-version --allow-same-version
+          npm publish --tag next --provenance
+          echo "test-version=$TEST_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for npm registry propagation
+        run: |
+          for i in $(seq 1 12); do
+            npm view "prettier-plugin-modelica@${{ steps.publish-test.outputs.test-version }}" version 2>/dev/null && exit 0
+            sleep 10
+          done
+          echo "::error::Published prerelease did not become visible on the registry in time."
+          exit 1
+
+      - name: Install and smoke-test the published prerelease
+        run: |
+          mkdir -p /tmp/staging-test && cd /tmp/staging-test
+          npm init -y > /dev/null
+          npm install --no-save "prettier-plugin-modelica@${{ steps.publish-test.outputs.test-version }}" prettier
+          echo 'model Foo end Foo;' > test.mo
+          npx prettier --plugin=prettier-plugin-modelica test.mo
+
+      - name: Create staging validation marker
+        run: |
+          {
+            echo "version: ${{ steps.bump.outputs.version }}"
+            echo "tested-npm-version: ${{ steps.publish-test.outputs.test-version }}"
+            echo "validated-at: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          } > .staging-validated
+          git add .staging-validated
+          git commit -m "chore: mark staging pipeline as validated"
+          git push origin staging
+
+      - name: Summary
+        run: |
+          {
+            echo "## Staging Release Summary"
+            echo "- **Target version**: ${{ steps.bump.outputs.version }}"
+            echo "- **Tested npm prerelease**: \`prettier-plugin-modelica@${{ steps.publish-test.outputs.test-version }}\` (dist-tag \`next\`)"
+            echo "- Review the \`staging\` branch (\`package.json\`, \`CHANGELOG.md\`), amend it if needed, then run **Main Release** to publish \`${{ steps.bump.outputs.version }}\` under the \`latest\` dist-tag."
+          } >> "$GITHUB_STEP_SUMMARY"

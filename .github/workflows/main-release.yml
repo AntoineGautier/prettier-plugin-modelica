@@ -1,0 +1,159 @@
+name: Main Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_staging_tested:
+        description: "I have reviewed the staging branch and tested the @next prerelease"
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  id-token: write
+
+env:
+  GH_USERNAME: github-actions[bot]
+
+jobs:
+  validate-staging:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+      tag: ${{ steps.check.outputs.tag }}
+    steps:
+      - name: Require confirmation
+        if: ${{ github.event.inputs.confirm_staging_tested != 'true' }}
+        run: |
+          echo "::error::You must check the confirmation box to proceed."
+          exit 1
+
+      - name: Checkout staging branch
+        uses: actions/checkout@v4
+        with:
+          ref: staging
+          fetch-depth: 0
+
+      - name: Validate staging marker, version and changelog entry
+        id: check
+        run: |
+          if [ ! -f .staging-validated ]; then
+            echo "::error::.staging-validated not found on staging — run Staging Release first."
+            exit 1
+          fi
+
+          VERSION=$(grep '^version: ' .staging-validated | cut -d' ' -f2)
+          if [ -z "$VERSION" ]; then
+            echo "::error::Could not read version from .staging-validated"
+            exit 1
+          fi
+          echo "Found staging version: $VERSION"
+
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          LATEST_VERSION=${LATEST_TAG#v}
+          HIGHEST=$(printf '%s\n%s\n' "$LATEST_VERSION" "$VERSION" | sort -V | tail -n1)
+          if [ "$HIGHEST" != "$VERSION" ] || [ "$VERSION" = "$LATEST_VERSION" ]; then
+            echo "::error::Staging version ($VERSION) is not newer than the latest tag ($LATEST_TAG)."
+            exit 1
+          fi
+
+          if ! grep -qE "^## \[?$VERSION\]?" CHANGELOG.md; then
+            echo "::error::No CHANGELOG.md entry found for $VERSION"
+            exit 1
+          fi
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+
+  merge-and-publish:
+    needs: validate-staging
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          submodules: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Merge staging into main and tag
+        run: |
+          git config user.name "${GH_USERNAME}"
+          git config user.email "${GH_USERNAME}@users.noreply.github.com"
+
+          git fetch origin staging
+          git merge origin/staging --no-edit
+
+          if [ -f .staging-validated ]; then
+            git rm .staging-validated
+            git commit -m "chore: remove staging validation marker"
+          fi
+
+          git tag "${{ needs.validate-staging.outputs.tag }}"
+          git push origin main
+          git push origin "${{ needs.validate-staging.outputs.tag }}"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: "https://registry.npmjs.org"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup tree-sitter-modelica
+        run: npm run setup
+
+      - name: Build package
+        run: npm run build
+
+      - name: Publish to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --provenance
+
+      - name: Extract release notes from changelog
+        id: notes
+        run: |
+          VERSION="${{ needs.validate-staging.outputs.version }}"
+          CONTENT=$(awk -v ver="$VERSION" '
+            $0 ~ ("^## \\[?" ver) { found=1; next }
+            found && /^## / { exit }
+            found { print }
+          ' CHANGELOG.md)
+          {
+            echo "content<<NOTES_EOF"
+            echo "$CONTENT"
+            echo "NOTES_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ needs.validate-staging.outputs.tag }}" \
+            --title "${{ needs.validate-staging.outputs.tag }}" \
+            --notes "${{ steps.notes.outputs.content }}"
+
+  notify-completion:
+    needs: [validate-staging, merge-and-publish]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Summary
+        run: |
+          {
+            echo "## Main Release Summary"
+            echo "- **Version**: ${{ needs.validate-staging.outputs.tag }}"
+            echo "- **Merge & Publish**: ${{ needs.merge-and-publish.result }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ needs.merge-and-publish.result }}" == "success" ]; then
+            {
+              echo "- 📦 https://www.npmjs.com/package/prettier-plugin-modelica/v/${{ needs.validate-staging.outputs.version }}"
+              echo "- 🏷️ https://github.com/${{ github.repository }}/releases/tag/${{ needs.validate-staging.outputs.tag }}"
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi

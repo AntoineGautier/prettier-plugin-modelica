@@ -34,6 +34,9 @@ jobs:
       - name: Setup tree-sitter-modelica
         run: npm run setup
 
+      - name: Run test suite
+        run: npm test
+
       - name: Configure git identity
         run: |
           git config user.name "${GH_USERNAME}"
@@ -52,9 +55,6 @@ jobs:
 
       - name: Push staging branch
         run: git push --force origin staging
-
-      - name: Build package
-        run: npm run build
 
       - name: Publish prerelease to npm for testing
         id: publish-test

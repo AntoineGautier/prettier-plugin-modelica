@@ -1,7 +1,16 @@
 name: Staging Release
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "fresh: rebuild staging from main with a version bump. restage: re-stage the current staging branch as-is (after a hand-edit), without touching main."
+        required: true
+        type: choice
+        options:
+          - fresh
+          - restage
+        default: fresh
 
 permissions:
   contents: write
@@ -14,9 +23,13 @@ jobs:
   stage:
     runs-on: ubuntu-latest
     steps:
+      # npm's trusted publisher config accepts only one workflow filename per
+      # package, so both fresh and restage runs go through this single file
+      # rather than separate workflows.
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.inputs.mode == 'restage' && 'staging' || '' }}
           fetch-depth: 0
           submodules: true
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -26,7 +39,9 @@ jobs:
         with:
           node-version: 22
           registry-url: "https://registry.npmjs.org"
-          cache: npm
+
+      - name: Update npm (staged/trusted publishing needs npm >=11.15.0)
+        run: npm install -g npm@latest
 
       - name: Install dependencies
         run: npm ci
@@ -43,65 +58,93 @@ jobs:
           git config user.email "${GH_USERNAME}@users.noreply.github.com"
 
       - name: Create staging branch from current main
+        if: github.event.inputs.mode == 'fresh'
         run: git checkout -B staging HEAD
 
       - name: Bump version and update changelog
-        id: bump
+        if: github.event.inputs.mode == 'fresh'
         run: |
           # Tag creation is deferred to the Main Release workflow, so a
           # rejected staging run never leaves a dangling git tag behind.
           npx commit-and-tag-version --skip.tag
-          echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
 
       - name: Push staging branch
-        run: git push --force origin staging
+        if: github.event.inputs.mode == 'fresh'
+        run: git push --force-with-lease origin staging
 
-      - name: Publish prerelease to npm for testing
-        id: publish-test
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          # A unique prerelease id (rather than the bare target version) lets
-          # staging be re-run without colliding with an already-published,
-          # immutable npm version string.
-          TEST_VERSION="${{ steps.bump.outputs.version }}-staging.${{ github.run_number }}"
-          npm version "$TEST_VERSION" --no-git-tag-version --allow-same-version
-          npm publish --tag next --provenance
-          echo "test-version=$TEST_VERSION" >> "$GITHUB_OUTPUT"
+      - name: Read version
+        id: version
+        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
 
-      - name: Wait for npm registry propagation
+      - name: Stage package on npm
+        id: stage
+        # Trusted publishing (OIDC, id-token: write above) authenticates this
+        # step — no NPM_TOKEN secret involved. `npm stage publish` does not
+        # require 2FA and does not make the package public; a human must
+        # separately run `npm stage approve` (which does require 2FA) before
+        # this version is actually installable.
         run: |
-          for i in $(seq 1 12); do
-            npm view "prettier-plugin-modelica@${{ steps.publish-test.outputs.test-version }}" version 2>/dev/null && exit 0
-            sleep 10
-          done
-          echo "::error::Published prerelease did not become visible on the registry in time."
-          exit 1
+          npm stage publish --provenance --json > stage-publish.json
+          cat stage-publish.json
+          STAGE_ID=$(node -e '
+            const data = require("./stage-publish.json");
+            function find(o) {
+              if (o && typeof o === "object") {
+                if (typeof o.stageId === "string") return o.stageId;
+                for (const k of Object.keys(o)) {
+                  const r = find(o[k]);
+                  if (r) return r;
+                }
+              }
+              return undefined;
+            }
+            const id = find(data);
+            if (!id) { console.error("stageId not found in npm stage publish output"); process.exit(1); }
+            console.log(id);
+          ')
+          echo "stage-id=$STAGE_ID" >> "$GITHUB_OUTPUT"
 
-      - name: Install and smoke-test the published prerelease
+      - name: Download and smoke-test the staged tarball
         run: |
+          mkdir -p /tmp/staged && cd /tmp/staged
+          npm stage download "${{ steps.stage.outputs.stage-id }}"
+          ls -la
+
           mkdir -p /tmp/staging-test && cd /tmp/staging-test
           npm init -y > /dev/null
-          npm install --no-save "prettier-plugin-modelica@${{ steps.publish-test.outputs.test-version }}" prettier
+          npm install --no-save /tmp/staged/*.tgz prettier
           echo 'model Foo end Foo;' > test.mo
           npx prettier --plugin=prettier-plugin-modelica test.mo
 
-      - name: Create staging validation marker
+      - name: Update staging validation marker
         run: |
           {
-            echo "version: ${{ steps.bump.outputs.version }}"
-            echo "tested-npm-version: ${{ steps.publish-test.outputs.test-version }}"
+            echo "version: ${{ steps.version.outputs.version }}"
+            echo "npm-stage-id: ${{ steps.stage.outputs.stage-id }}"
             echo "validated-at: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
           } > .staging-validated
           git add .staging-validated
-          git commit -m "chore: mark staging pipeline as validated"
+          git commit -m "chore: update staging validation marker"
           git push origin staging
+
+      - name: List outstanding staged versions
+        run: |
+          {
+            echo "### Outstanding staged versions for prettier-plugin-modelica"
+            echo '```'
+            npm stage list prettier-plugin-modelica || true
+            echo '```'
+            echo "Any stage-id above other than \`${{ steps.stage.outputs.stage-id }}\` is stale (left over from an earlier run) — reject it yourself (\`npm stage reject <id> --otp=<code>\`) so it can't be approved by mistake."
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Summary
         run: |
           {
-            echo "## Staging Release Summary"
-            echo "- **Target version**: ${{ steps.bump.outputs.version }}"
-            echo "- **Tested npm prerelease**: \`prettier-plugin-modelica@${{ steps.publish-test.outputs.test-version }}\` (dist-tag \`next\`)"
-            echo "- Review the \`staging\` branch (\`package.json\`, \`CHANGELOG.md\`), amend it if needed, then run **Main Release** to publish \`${{ steps.bump.outputs.version }}\` under the \`latest\` dist-tag."
+            echo "## Staging Release Summary (mode: ${{ github.event.inputs.mode }})"
+            echo "- **Version**: ${{ steps.version.outputs.version }}"
+            echo "- **npm stage id**: \`${{ steps.stage.outputs.stage-id }}\`"
+            echo "- To amend \`staging\` (e.g. changelog wording, a quick fix): push a commit directly to \`staging\`, then re-run this workflow with mode=\`restage\`. Do not re-run with mode=\`fresh\`, which recreates \`staging\` from \`main\` and would discard the amendment."
+            echo "- Then approve the npm stage yourself (requires your 2FA, cannot be done in CI):"
+            echo "  \`npm stage approve ${{ steps.stage.outputs.stage-id }} --otp=<code>\`, or via npmjs.com → package → Staged Packages tab."
+            echo "- Once approved, run **Main Release** to merge \`staging\` into \`main\`, tag \`v${{ steps.version.outputs.version }}\`, and create the GitHub Release."
           } >> "$GITHUB_STEP_SUMMARY"

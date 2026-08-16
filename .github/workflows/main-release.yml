@@ -3,15 +3,14 @@ name: Main Release
 on:
   workflow_dispatch:
     inputs:
-      confirm_staging_tested:
-        description: "I have reviewed the staging branch and tested the @next prerelease"
+      confirm_npm_stage_approved:
+        description: "I have already run `npm stage approve <id>` (or approved on npmjs.com) for this version"
         required: true
         type: boolean
         default: false
 
 permissions:
   contents: write
-  id-token: write
 
 env:
   GH_USERNAME: github-actions[bot]
@@ -24,9 +23,9 @@ jobs:
       tag: ${{ steps.check.outputs.tag }}
     steps:
       - name: Require confirmation
-        if: ${{ github.event.inputs.confirm_staging_tested != 'true' }}
+        if: ${{ github.event.inputs.confirm_npm_stage_approved != 'true' }}
         run: |
-          echo "::error::You must check the confirmation box to proceed."
+          echo "::error::You must confirm the npm stage has already been approved before proceeding. This workflow cannot approve it for you (npm stage approve requires your live 2FA)."
           exit 1
 
       - name: Checkout staging branch
@@ -66,7 +65,7 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
 
-  merge-and-publish:
+  merge-and-release:
     needs: validate-staging
     runs-on: ubuntu-latest
     steps:
@@ -95,7 +94,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          registry-url: "https://registry.npmjs.org"
           cache: npm
 
       - name: Install dependencies
@@ -112,11 +110,6 @@ jobs:
           git tag "${{ needs.validate-staging.outputs.tag }}"
           git push origin main
           git push origin "${{ needs.validate-staging.outputs.tag }}"
-
-      - name: Publish to npm
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish --provenance
 
       - name: Extract release notes from changelog
         id: notes
@@ -142,7 +135,7 @@ jobs:
             --notes "${{ steps.notes.outputs.content }}"
 
   notify-completion:
-    needs: [validate-staging, merge-and-publish]
+    needs: [validate-staging, merge-and-release]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -151,9 +144,9 @@ jobs:
           {
             echo "## Main Release Summary"
             echo "- **Version**: ${{ needs.validate-staging.outputs.tag }}"
-            echo "- **Merge & Publish**: ${{ needs.merge-and-publish.result }}"
+            echo "- **Merge & GitHub Release**: ${{ needs.merge-and-release.result }}"
           } >> "$GITHUB_STEP_SUMMARY"
-          if [ "${{ needs.merge-and-publish.result }}" == "success" ]; then
+          if [ "${{ needs.merge-and-release.result }}" == "success" ]; then
             {
               echo "- 📦 https://www.npmjs.com/package/prettier-plugin-modelica/v/${{ needs.validate-staging.outputs.version }}"
               echo "- 🏷️ https://github.com/${{ github.repository }}/releases/tag/${{ needs.validate-staging.outputs.tag }}"

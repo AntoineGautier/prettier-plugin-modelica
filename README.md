@@ -97,4 +97,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for commit message conventions and the re
 
 This project is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**.
 
-See the [LICENSE](LICENSE) file for the full license text and the [COPYRIGHT](COPYRIGHT) file for copyright and licensing details.
+See the [LICENSE](LICENSE) file for the full license text and copyright notice.

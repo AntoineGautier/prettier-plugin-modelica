@@ -1,18 +1,37 @@
 /**
  * Tree-sitter parser wrapper for Modelica
- * Uses native tree-sitter Node bindings for parsing
+ * Uses web-tree-sitter (WASM) bindings for parsing, so the grammar ships as a
+ * portable .wasm file bundled in this package instead of a native addon that
+ * would need per-platform prebuilds.
  */
 
-import Parser from "tree-sitter";
+import { Parser, Language, Node as TSNode } from "web-tree-sitter";
 import * as fs from "fs";
 import * as path from "path";
-import ModelicaGrammar from "tree-sitter-modelica";
+import { fileURLToPath } from "url";
 
-// Initialize the parser with the Modelica language
-// Cast needed: this grammar's native binding predates tree-sitter@0.25's
-// `name` field on Language, but Parser.setLanguage doesn't use it at runtime.
-const parser = new Parser();
-parser.setLanguage(ModelicaGrammar as unknown as Parser.Language);
+// The grammar wasm is copied next to this file both in dist/ (build step)
+// and in src/ (setup step, for `tsx` dev mode), so a same-directory lookup
+// works in both layouts.
+const WASM_PATH = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "tree-sitter-modelica.wasm",
+);
+
+let parserPromise: Promise<Parser> | null = null;
+
+async function getParser(): Promise<Parser> {
+  if (!parserPromise) {
+    parserPromise = (async () => {
+      await Parser.init();
+      const language = await Language.load(WASM_PATH);
+      const parser = new Parser();
+      parser.setLanguage(language);
+      return parser;
+    })();
+  }
+  return parserPromise;
+}
 
 /**
  * Position in source code
@@ -32,7 +51,7 @@ export interface Range {
 
 /**
  * AST Node from tree-sitter
- * This interface wraps tree-sitter's SyntaxNode to maintain compatibility
+ * This interface wraps tree-sitter's Node to maintain compatibility
  * with the existing printer implementation
  */
 export interface ASTNode {
@@ -43,8 +62,8 @@ export interface ASTNode {
   isError: boolean;
   isMissing: boolean;
   fieldName?: string;
-  /** Raw tree-sitter SyntaxNode for advanced use cases (e.g., accessing anonymous children) */
-  _syntaxNode?: Parser.SyntaxNode;
+  /** Raw tree-sitter Node for advanced use cases (e.g., accessing anonymous children) */
+  _syntaxNode?: TSNode;
 }
 
 /**
@@ -117,12 +136,12 @@ const INCLUDED_ANONYMOUS_TOKENS = new Set([
 ]);
 
 /**
- * Convert a tree-sitter SyntaxNode to our ASTNode interface
+ * Convert a tree-sitter Node to our ASTNode interface
  *
  * Includes named children plus specific operator/keyword tokens needed by the printer.
  * Excludes punctuation like '.', ';', '[', ']', '(', ')' etc.
  */
-function convertNode(node: Parser.SyntaxNode, fieldName?: string): ASTNode {
+function convertNode(node: TSNode, fieldName?: string): ASTNode {
   const children: ASTNode[] = [];
 
   // Include named children and specific anonymous tokens (operators, keywords)
@@ -181,13 +200,20 @@ function countErrors(node: ASTNode): {
 }
 
 /**
- * Parse Modelica source code using native tree-sitter bindings
+ * Parse Modelica source code using web-tree-sitter (WASM) bindings
  * @param sourceCode The Modelica source code to parse
  * @param debug Optional debug flag (kept for API compatibility)
  * @returns ParseResult with AST and error information
  */
-export function parse(sourceCode: string, debug: boolean = false): ParseResult {
+export async function parse(
+  sourceCode: string,
+  debug: boolean = false,
+): Promise<ParseResult> {
+  const parser = await getParser();
   const tree = parser.parse(sourceCode);
+  if (!tree) {
+    throw new Error("Modelica parser produced no syntax tree");
+  }
 
   if (debug) {
     console.log("[DEBUG] Tree root type:", tree.rootNode.type);
@@ -210,11 +236,11 @@ export function parse(sourceCode: string, debug: boolean = false): ParseResult {
 }
 
 /**
- * Parse Modelica file using native tree-sitter bindings
+ * Parse Modelica file using web-tree-sitter (WASM) bindings
  * @param filePath Path to the Modelica file
  * @returns ParseResult with AST and error information
  */
-export function parseFile(filePath: string): ParseResult {
+export async function parseFile(filePath: string): Promise<ParseResult> {
   const absolutePath = path.resolve(filePath);
   const sourceCode = fs.readFileSync(absolutePath, "utf8");
   return parse(sourceCode);
@@ -288,11 +314,12 @@ export function getNodeText(node: ASTNode): string {
 /**
  * Check if the parser is available
  */
-export function isParserAvailable(): boolean {
+export async function isParserAvailable(): Promise<boolean> {
   try {
+    const parser = await getParser();
     // Try to parse a simple Modelica snippet
     const tree = parser.parse("model Test end Test;");
-    return tree.rootNode.type === "stored_definitions";
+    return tree?.rootNode.type === "stored_definitions";
   } catch {
     return false;
   }
@@ -303,9 +330,7 @@ export function isParserAvailable(): boolean {
  */
 export function getParserVersion(): string | null {
   try {
-    // Return the tree-sitter package version
-    // Note: tree-sitter doesn't expose version directly, so we return a placeholder
-    return "tree-sitter (native bindings)";
+    return "web-tree-sitter (WASM bindings)";
   } catch {
     return null;
   }

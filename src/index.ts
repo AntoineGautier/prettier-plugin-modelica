@@ -1,6 +1,6 @@
 /**
  * Prettier Plugin for Modelica
- * Uses tree-sitter CLI for parsing
+ * Uses tree-sitter (via WASM bindings, see parser.ts) for parsing
  */
 
 import type {
@@ -31,8 +31,8 @@ const languages: SupportLanguage[] = [
 // Parser definition
 const parsers: Record<string, Parser> = {
   modelica: {
-    parse(text: string): ASTNode {
-      const result = parseModelica(text);
+    async parse(text: string): Promise<ASTNode> {
+      const result = await parseModelica(text);
       return result.rootNode;
     },
     astFormat: "modelica-ast",
@@ -55,7 +55,7 @@ const printers: Record<string, Printer<ASTNode>> = {
     // Restrict Prettier's AST traversal (used by the embed preprocessing) to
     // actual child nodes. Without this, Prettier visits every enumerable
     // property of every node — including `_syntaxNode`, which drags the
-    // traversal into the native tree-sitter tree and slows formatting ~40x.
+    // traversal into the underlying tree-sitter tree and slows formatting ~40x.
     getVisitorKeys: () => ["children"],
   },
 };

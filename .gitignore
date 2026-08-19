@@ -3,5 +3,6 @@ dist
 node_modules
 grammars/modelica
 grammars/*.wasm
+src/tree-sitter-modelica.wasm
 .claude
 .zed

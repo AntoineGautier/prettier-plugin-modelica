@@ -22,8 +22,8 @@
     "README.md"
   ],
   "scripts": {
-    "setup": "cd grammars/tree-sitter-modelica && npm_config_allow_scripts= npm ci && npm_config_allow_scripts= npx tree-sitter generate",
-    "build": "tsc",
+    "setup": "cd grammars/tree-sitter-modelica && npm_config_allow_scripts= npm ci && npm_config_allow_scripts= npx tree-sitter generate && npx tree-sitter build --wasm . && cp tree-sitter-modelica.wasm ../../src/tree-sitter-modelica.wasm",
+    "build": "tsc && cp src/tree-sitter-modelica.wasm dist/tree-sitter-modelica.wasm && chmod +x dist/cli.js",
     "dev": "tsc --watch",
     "clean": "rm -rf dist",
     "prepublishOnly": "npm run clean && npm run build",
@@ -46,8 +46,7 @@
     "prettier": "^3.0.0"
   },
   "dependencies": {
-    "tree-sitter": "^0.25.0",
-    "tree-sitter-modelica": "file:grammars/tree-sitter-modelica"
+    "web-tree-sitter": "^0.26.12"
   },
   "engines": {
     "node": "^20 || ^22"

@@ -16,12 +16,13 @@ const grammarDir = path.join(
 // Clears any local `allow-scripts` policy (e.g. from a corporate npmrc) that
 // would otherwise block tree-sitter-modelica's preinstall/install scripts.
 const env = { ...process.env, npm_config_allow_scripts: "" };
-const npm = process.platform === "win32" ? "npm.cmd" : "npm";
-const npx = process.platform === "win32" ? "npx.cmd" : "npx";
+// Windows' npm/npx are .cmd shims; Node refuses to spawn those directly
+// without shell: true (a guard against batch-file argument injection).
+const shell = process.platform === "win32";
 
-execFileSync(npm, ["ci"], { cwd: grammarDir, env, stdio: "inherit" });
-execFileSync(npx, ["tree-sitter", "generate"], { cwd: grammarDir, env, stdio: "inherit" });
-execFileSync(npx, ["tree-sitter", "build", "--wasm", "."], { cwd: grammarDir, stdio: "inherit" });
+execFileSync("npm", ["ci"], { cwd: grammarDir, env, stdio: "inherit", shell });
+execFileSync("npx", ["tree-sitter", "generate"], { cwd: grammarDir, env, stdio: "inherit", shell });
+execFileSync("npx", ["tree-sitter", "build", "--wasm", "."], { cwd: grammarDir, stdio: "inherit", shell });
 
 copyFileSync(
   path.join(grammarDir, "tree-sitter-modelica.wasm"),

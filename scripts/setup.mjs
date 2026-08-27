@@ -13,16 +13,19 @@ const grammarDir = path.join(
   "tree-sitter-modelica",
 );
 
-// Clears any local `allow-scripts` policy (e.g. from a corporate npmrc) that
-// would otherwise block tree-sitter-modelica's preinstall/install scripts.
-const env = { ...process.env, npm_config_allow_scripts: "" };
 // Windows' npm/npx are .cmd shims; Node refuses to spawn those directly
 // without shell: true (a guard against batch-file argument injection).
 const shell = process.platform === "win32";
+const opts = { cwd: grammarDir, stdio: "inherit", shell };
 
-execFileSync("npm", ["ci"], { cwd: grammarDir, env, stdio: "inherit", shell });
-execFileSync("npx", ["tree-sitter", "generate"], { cwd: grammarDir, env, stdio: "inherit", shell });
-execFileSync("npx", ["tree-sitter", "build", "--wasm", "."], { cwd: grammarDir, stdio: "inherit", shell });
+// --ignore-scripts skips tree-sitter-modelica's own "install" script
+// (node-gyp-build), which builds the native N-API addon we don't need since
+// prettier-plugin-modelica only consumes the wasm grammar. It also skips
+// tree-sitter-cli's install script, so fetch its platform binary separately.
+execFileSync("npm", ["ci", "--ignore-scripts"], opts);
+execFileSync("npm", ["rebuild", "tree-sitter-cli"], opts);
+execFileSync("npx", ["tree-sitter", "generate"], opts);
+execFileSync("npx", ["tree-sitter", "build", "--wasm", "."], opts);
 
 copyFileSync(
   path.join(grammarDir, "tree-sitter-modelica.wasm"),

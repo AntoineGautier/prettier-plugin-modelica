@@ -22,7 +22,7 @@
     "README.md"
   ],
   "scripts": {
-    "setup": "cd grammars/tree-sitter-modelica && npm_config_allow_scripts= npm ci && npm_config_allow_scripts= npx tree-sitter generate && npx tree-sitter build --wasm . && cp tree-sitter-modelica.wasm ../../src/tree-sitter-modelica.wasm",
+    "setup": "node scripts/setup.mjs",
     "build": "tsc && cp src/tree-sitter-modelica.wasm dist/tree-sitter-modelica.wasm && chmod +x dist/cli.js",
     "dev": "tsc --watch",
     "clean": "rm -rf dist",

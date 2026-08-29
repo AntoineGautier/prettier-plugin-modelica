@@ -1,5 +1,7 @@
 # prettier-plugin-modelica
 
+[![npm version](https://img.shields.io/npm/v/prettier-plugin-modelica.svg)](https://www.npmjs.com/package/prettier-plugin-modelica)
+
 A [Prettier](https://prettier.io/) plugin for formatting Modelica code.
 
 Uses the [tree-sitter-modelica](https://github.com/OpenModelica/tree-sitter-modelica) grammar for parsing, which generates an abstract syntax tree (AST) that Prettier then formats back into consistently styled source code.
@@ -10,7 +12,13 @@ see `DEFAULT_PRESERVED_TAGS` in [src/print/html-formatter.ts](src/print/html-for
 
 ## Installation
 
-From source:
+From [npm](https://www.npmjs.com/package/prettier-plugin-modelica):
+
+```bash
+npm install --save-dev prettier-plugin-modelica prettier
+```
+
+From source (for contributing or testing unreleased changes):
 
 ```bash
 git clone https://github.com/AntoineGautier/prettier-plugin-modelica.git
@@ -22,37 +30,42 @@ npm install && npm run build
 
 ## Usage
 
+> [!NOTE]
+> The examples below use `--plugin prettier-plugin-modelica` and `npx modelica-format`, which apply
+> when installed from npm. If you built from source instead, use `--plugin ./dist/index.js` and
+> `npm run format` / `npm run parse`.
+
 ### Format a file (preview to stdout)
 
 ```bash
 # Directly with prettier
-prettier --plugin ./dist/index.js path/to/file.mo
+prettier --plugin prettier-plugin-modelica path/to/file.mo
 # CLI equivalent
-npm run format -- path/to/file.mo
+npx modelica-format path/to/file.mo
 ```
 
 ### Format and write back to the same file
 
 ```bash
 # Directly with prettier
-prettier --plugin ./dist/index.js path/to/file.mo --write
+prettier --plugin prettier-plugin-modelica path/to/file.mo --write
 # CLI equivalent
-npm run format -- path/to/file.mo --write
+npx modelica-format path/to/file.mo --write
 ```
 
 ### Format and save to a different file
 
 ```bash
 # Directly with prettier
-prettier --plugin ./dist/index.js path/to/file.mo > formatted.mo
+prettier --plugin prettier-plugin-modelica path/to/file.mo > formatted.mo
 # CLI equivalent
-npm run format -- path/to/file.mo --output formatted.mo
+npx modelica-format path/to/file.mo -o formatted.mo
 ```
 
 ### Check correctness (the formatter doesn't break code)
 
 ```bash
-npm run format -- path/to/file.mo --check
+npx modelica-format path/to/file.mo --check
 ```
 
 > [!TIP]

@@ -4,7 +4,10 @@
  * Uses Prettier's embed feature to delegate HTML formatting to the HTML parser
  */
 
-import { DEFAULT_PRESERVED_TAGS } from "./html-formatter.js";
+import {
+  DEFAULT_PRESERVED_TAGS,
+  buildPreservedTagPattern,
+} from "./html-formatter.js";
 
 export interface HTMLEmbedFormatterOptions {
   preservedTags?: string[];
@@ -241,10 +244,7 @@ function extractPreservedBlocks(
 
   for (const tag of preservedTags) {
     // Match opening tag with any attributes, content, and closing tag
-    const pattern = new RegExp(
-      `<${tag}(?=[\\s>])([^>]*)>(.*?)<\\/${tag}>`,
-      "gis",
-    );
+    const pattern = buildPreservedTagPattern(tag);
     processedHtml = processedHtml.replace(pattern, (match) => {
       const placeholder = generatePlaceholder(match, blockIndex);
       preservedBlocks.push({ placeholder, content: match });

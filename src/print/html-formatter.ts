@@ -167,7 +167,10 @@ function normalizeHTMLWhitespace(
 
   // Replace preserved tags with placeholders
   for (const tag of preservedTags) {
-    const pattern = new RegExp(`<${tag}([^>]*)>(.*?)<\\/${tag}>`, "gis");
+    const pattern = new RegExp(
+      `<${tag}(?=[\\s>])([^>]*)>(.*?)<\\/${tag}>`,
+      "gis",
+    );
     processed = processed.replace(pattern, (match) => {
       const placeholder = `__PRESERVED_BLOCK_${blockIndex}__`;
       preservedBlocks.push({ placeholder, content: match });
@@ -214,7 +217,10 @@ function tokenizeHTML(html: string, preservedTags: string[]): Token[] {
   // Build regex pattern for preserved tags
   const preservedPattern =
     preservedTags.length > 0
-      ? new RegExp(`<(${preservedTags.join("|")})([^>]*)>(.*?)<\\/\\1>`, "gis")
+      ? new RegExp(
+          `<(${preservedTags.join("|")})(?=[\\s>])([^>]*)>(.*?)<\\/\\1>`,
+          "gis",
+        )
       : null;
 
   while (position < html.length) {

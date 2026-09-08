@@ -76,7 +76,7 @@ export function postProcessHTMLFromPrettier(
  */
 function attachClosingHtmlTag(html: string, stripIndent: boolean = true): string {
   let result = html;
-  
+
   if (stripIndent) {
     // For top-level: remove indent before </html>
     result = result.replace(/\n\s*<\/html>/i, "\n</html>");
@@ -84,10 +84,10 @@ function attachClosingHtmlTag(html: string, stripIndent: boolean = true): string
     // For nested: ensure </html> has consistent 2-space indent
     result = result.replace(/\n\s*<\/html>/i, "\n  </html>");
   }
-  
+
   // Remove trailing newline/whitespace after </html>
   result = result.replace(/<\/html>\s*$/i, "</html>");
-  
+
   return result;
 }
 

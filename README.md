@@ -78,30 +78,6 @@ npx modelica-format path/to/file.mo --check
 npm run parse -- path/to/file.mo
 ```
 
-## Known Limitations
-
-The following constructs are currently not supported due to `tree-sitter-modelica` bugs.
-
-### 1. Quoted Elements in Enumerations
-
-```mo
-type Logic = enumeration(
-  'U' "U  Uninitialized",
-  '0' "0  Forcing 0",
-  '1' "1  Forcing 1",
-  '-' "-  Do not care");
-```
-
-### 2. Empty `equation` Sections
-
-```mo
-model Demo
-  replaceable model Medium = Modelica.Media.Interfaces.PartialMedium
-    "Medium model" annotation (choicesAllMatching=true);
-equation
-end Demo;
-```
-
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for commit message conventions and the release process.

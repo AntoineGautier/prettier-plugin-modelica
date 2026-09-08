@@ -14,6 +14,24 @@ export interface HTMLFormatterOptions {
 // e.g., <a> can contain <code>, so "a" must be processed before "code"
 export const DEFAULT_PRESERVED_TAGS = ["pre", "a", "code", "font"];
 
+/**
+ * Build a regex matching a preserved block: an opening tag with any
+ * attributes, its (lazy) content, and the matching closing tag.
+ *
+ * The `(?=[\s>])` lookahead forces the whole tag name to match, so a short
+ * preserved tag such as `<a>` cannot prefix-match a longer tag like
+ * `<address>`.
+ *
+ * @param tag - A single tag name, or a list of tag names to match as an
+ *   alternation. With a list, the tag name is captured as group 1 and the
+ *   closing tag is matched via the `\1` backreference.
+ */
+export function buildPreservedTagPattern(tag: string | string[]): RegExp {
+  const open = Array.isArray(tag) ? `(${tag.join("|")})` : tag;
+  const close = Array.isArray(tag) ? "\\1" : tag;
+  return new RegExp(`<${open}(?=[\\s>])([^>]*)>(.*?)<\\/${close}>`, "gis");
+}
+
 // Block-level tags that should be on their own lines
 const BLOCK_LEVEL_TAGS = [
   "p",
@@ -167,10 +185,7 @@ function normalizeHTMLWhitespace(
 
   // Replace preserved tags with placeholders
   for (const tag of preservedTags) {
-    const pattern = new RegExp(
-      `<${tag}(?=[\\s>])([^>]*)>(.*?)<\\/${tag}>`,
-      "gis",
-    );
+    const pattern = buildPreservedTagPattern(tag);
     processed = processed.replace(pattern, (match) => {
       const placeholder = `__PRESERVED_BLOCK_${blockIndex}__`;
       preservedBlocks.push({ placeholder, content: match });
@@ -216,12 +231,7 @@ function tokenizeHTML(html: string, preservedTags: string[]): Token[] {
 
   // Build regex pattern for preserved tags
   const preservedPattern =
-    preservedTags.length > 0
-      ? new RegExp(
-          `<(${preservedTags.join("|")})(?=[\\s>])([^>]*)>(.*?)<\\/\\1>`,
-          "gis",
-        )
-      : null;
+    preservedTags.length > 0 ? buildPreservedTagPattern(preservedTags) : null;
 
   while (position < html.length) {
     // Check for preserved tags first

@@ -241,7 +241,10 @@ function extractPreservedBlocks(
 
   for (const tag of preservedTags) {
     // Match opening tag with any attributes, content, and closing tag
-    const pattern = new RegExp(`<${tag}([^>]*)>(.*?)<\\/${tag}>`, "gis");
+    const pattern = new RegExp(
+      `<${tag}(?=[\\s>])([^>]*)>(.*?)<\\/${tag}>`,
+      "gis",
+    );
     processedHtml = processedHtml.replace(pattern, (match) => {
       const placeholder = generatePlaceholder(match, blockIndex);
       preservedBlocks.push({ placeholder, content: match });

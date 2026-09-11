@@ -23,7 +23,22 @@ const opts = { cwd: grammarDir, stdio: "inherit", shell };
 // prettier-plugin-modelica only consumes the wasm grammar. It also skips
 // tree-sitter-cli's install script, so fetch its platform binary separately.
 execFileSync("npm", ["ci", "--ignore-scripts"], opts);
-execFileSync("npm", ["rebuild", "tree-sitter-cli"], opts);
+
+// npm's allowScripts gate (npm >= 12) blocks tree-sitter-cli's "install"
+// script (which downloads its platform binary) unless it's explicitly
+// allow-listed. The project-scoped `--allow-scripts` CLI flag is rejected
+// outright, so point npm at a repo-local user config carrying the
+// allow-scripts entry instead — the submodule's own package.json/.npmrc
+// aren't ours to commit to.
+const allowScriptsConfig = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "tree-sitter-allow-scripts.npmrc",
+);
+execFileSync(
+  "npm",
+  ["rebuild", "tree-sitter-cli", `--userconfig=${allowScriptsConfig}`],
+  opts,
+);
 execFileSync("npx", ["tree-sitter", "generate"], opts);
 execFileSync("npx", ["tree-sitter", "build", "--wasm", "."], opts);
 

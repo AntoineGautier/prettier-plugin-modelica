@@ -42,6 +42,38 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # The release flow assumes main only ever moves forward to staging. If
+      # main gains commits while staging is ahead of it, the two diverge, the
+      # post-release fast-forward becomes impossible, and staging's changelog
+      # silently omits whatever landed on main. Blocking merges for as long as
+      # staging is ahead keeps that fast-forward guaranteed.
+      - name: Require main to contain staging
+        run: |
+          git fetch --quiet origin +refs/heads/main:refs/remotes/origin/main
+          if ! git fetch --quiet origin +refs/heads/staging:refs/remotes/origin/staging 2>/dev/null; then
+            echo "No staging branch — nothing to enforce."
+            exit 0
+          fi
+
+          if git merge-base --is-ancestor origin/staging origin/main; then
+            echo "main contains staging — safe to merge."
+            exit 0
+          fi
+
+          echo "::error::main is behind staging, so merging this PR would make them diverge."
+          echo "staging is ahead by:"
+          git log --oneline origin/main..origin/staging
+          echo ""
+          echo "Finish the release first (run Main Release, then fast-forward main):"
+          echo "  git fetch origin && git checkout main && git merge --ff-only origin/staging && git push origin main"
+          echo "Or, if you are abandoning that staging release, delete or reset the staging branch."
+          exit 1
+
       - name: Check test matrix result
         run: |
           if [ "${{ needs.test.result }}" != "success" ]; then

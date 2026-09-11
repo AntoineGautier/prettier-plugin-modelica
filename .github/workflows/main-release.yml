@@ -83,28 +83,30 @@ jobs:
           echo 'model Foo end Foo;' > test.mo
           npx prettier --plugin=prettier-plugin-modelica test.mo
 
-  merge-and-release:
+  tag-and-publish:
     needs: validate-staging
     runs-on: ubuntu-latest
     permissions:
       contents: write
       id-token: write
     steps:
-      - name: Checkout main
+      # This job never writes to main. main's ruleset requires pull requests
+      # and only the Repository admin role bypasses it, so pushing it from CI
+      # would mean handing an admin-scoped PAT to a job that also runs npm
+      # install scripts and build code. staging and tags are outside the
+      # ruleset, so the default GITHUB_TOKEN is enough for everything here;
+      # fast-forwarding main is left as a manual step.
+      - name: Checkout staging
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: staging
           fetch-depth: 0
           submodules: true
-          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Merge staging into main
+      - name: Drop the staging validation marker
         run: |
           git config user.name "${GH_USERNAME}"
           git config user.email "${GH_USERNAME}@users.noreply.github.com"
-
-          git fetch origin staging
-          git merge origin/staging --no-edit
 
           if [ -f .staging-validated ]; then
             git rm .staging-validated
@@ -130,17 +132,23 @@ jobs:
       - name: Run test suite
         run: npm test
 
+      - name: Tag and push staging
+        run: |
+          git tag "${{ needs.validate-staging.outputs.tag }}"
+          git push origin staging
+          git push origin "${{ needs.validate-staging.outputs.tag }}"
+
       - name: Publish to npm
+        # Runs after the pushes on purpose: publishing is the only step here
+        # that cannot be undone (a version number is burned even if you
+        # unpublish), so every reversible step must succeed first. When this
+        # ran before the pushes, a rejected push left 0.1.1 on npm with no tag,
+        # no release, and main still on the previous version.
+        #
         # Trusted publishing (OIDC, id-token: write above) authenticates this
         # step — no NPM_TOKEN secret involved. npm's trusted publisher config
         # for this package must point at this workflow file.
         run: npm publish --provenance
-
-      - name: Tag and push main
-        run: |
-          git tag "${{ needs.validate-staging.outputs.tag }}"
-          git push origin main
-          git push origin "${{ needs.validate-staging.outputs.tag }}"
 
       - name: Extract release notes from changelog
         id: notes
@@ -166,7 +174,7 @@ jobs:
             --notes "${{ steps.notes.outputs.content }}"
 
   notify-completion:
-    needs: [validate-staging, merge-and-release]
+    needs: [validate-staging, tag-and-publish]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -175,11 +183,18 @@ jobs:
           {
             echo "## Main Release Summary"
             echo "- **Version**: ${{ needs.validate-staging.outputs.tag }}"
-            echo "- **Merge, publish & GitHub Release**: ${{ needs.merge-and-release.result }}"
+            echo "- **Tag, publish & GitHub Release**: ${{ needs.tag-and-publish.result }}"
           } >> "$GITHUB_STEP_SUMMARY"
-          if [ "${{ needs.merge-and-release.result }}" == "success" ]; then
+          if [ "${{ needs.tag-and-publish.result }}" == "success" ]; then
             {
               echo "- 📦 https://www.npmjs.com/package/prettier-plugin-modelica/v/${{ needs.validate-staging.outputs.version }}"
               echo "- 🏷️ https://github.com/${{ github.repository }}/releases/tag/${{ needs.validate-staging.outputs.tag }}"
+              echo ""
+              echo "### ⚠️ Required manual step"
+              echo "\`main\` was not updated by this workflow. Fast-forward it now:"
+              echo '```'
+              echo "git fetch origin && git checkout main && git merge --ff-only origin/staging && git push origin main"
+              echo '```'
+              echo "Skipping this makes the next Staging Release cut from a stale \`main\`, and the next Main Release will fail when it tries to push a tag that already exists."
             } >> "$GITHUB_STEP_SUMMARY"
           fi

@@ -1,13 +1,7 @@
 name: Main Release
 
 on:
-  workflow_dispatch:
-    inputs:
-      confirm_npm_stage_approved:
-        description: "I have already run `npm stage approve <id>` (or approved on npmjs.com) for this version"
-        required: true
-        type: boolean
-        default: false
+  workflow_dispatch: {}
 
 permissions:
   contents: write
@@ -22,17 +16,12 @@ jobs:
       version: ${{ steps.check.outputs.version }}
       tag: ${{ steps.check.outputs.tag }}
     steps:
-      - name: Require confirmation
-        if: ${{ github.event.inputs.confirm_npm_stage_approved != 'true' }}
-        run: |
-          echo "::error::You must confirm the npm stage has already been approved before proceeding. This workflow cannot approve it for you (npm stage approve requires your live 2FA)."
-          exit 1
-
       - name: Checkout staging branch
         uses: actions/checkout@v4
         with:
           ref: staging
           fetch-depth: 0
+          submodules: true
 
       - name: Validate staging marker, version and changelog entry
         id: check
@@ -65,9 +54,41 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup tree-sitter-modelica
+        run: npm run setup
+
+      - name: Run test suite
+        run: npm test
+
+      - name: Build the package tarball
+        run: |
+          npm run build
+          mkdir -p /tmp/pack
+          npm pack --pack-destination /tmp/pack
+
+      - name: Smoke-test the packed tarball
+        run: |
+          mkdir -p /tmp/staging-test && cd /tmp/staging-test
+          npm init -y > /dev/null
+          npm install --no-save /tmp/pack/*.tgz prettier
+          echo 'model Foo end Foo;' > test.mo
+          npx prettier --plugin=prettier-plugin-modelica test.mo
+
   merge-and-release:
     needs: validate-staging
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
     steps:
       - name: Checkout main
         uses: actions/checkout@v4
@@ -94,7 +115,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          registry-url: "https://registry.npmjs.org"
           cache: npm
+
+      - name: Update npm (trusted publishing needs a recent npm version)
+        run: npm install -g npm@latest
 
       - name: Install dependencies
         run: npm ci
@@ -104,6 +129,12 @@ jobs:
 
       - name: Run test suite
         run: npm test
+
+      - name: Publish to npm
+        # Trusted publishing (OIDC, id-token: write above) authenticates this
+        # step — no NPM_TOKEN secret involved. npm's trusted publisher config
+        # for this package must point at this workflow file.
+        run: npm publish --provenance
 
       - name: Tag and push main
         run: |
@@ -144,7 +175,7 @@ jobs:
           {
             echo "## Main Release Summary"
             echo "- **Version**: ${{ needs.validate-staging.outputs.tag }}"
-            echo "- **Merge & GitHub Release**: ${{ needs.merge-and-release.result }}"
+            echo "- **Merge, publish & GitHub Release**: ${{ needs.merge-and-release.result }}"
           } >> "$GITHUB_STEP_SUMMARY"
           if [ "${{ needs.merge-and-release.result }}" == "success" ]; then
             {

@@ -11,6 +11,9 @@ env:
 
 jobs:
   stage:
+    # Anyone with repo write access could otherwise dispatch this; pin it to
+    # the maintainer explicitly instead of relying on collaborator list state.
+    if: github.triggering_actor == 'AntoineGautier'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

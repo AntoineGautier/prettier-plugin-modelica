@@ -11,6 +11,9 @@ env:
 
 jobs:
   validate-staging:
+    # Anyone with repo write access could otherwise dispatch this; pin it to
+    # the maintainer explicitly instead of relying on collaborator list state.
+    if: github.triggering_actor == 'AntoineGautier'
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.check.outputs.version }}
@@ -86,6 +89,10 @@ jobs:
 
   tag-and-publish:
     needs: validate-staging
+    # Redundant with validate-staging's guard under normal skip-propagation,
+    # but this job is the one that actually tags, publishes, and releases —
+    # keep its own check so that invariant doesn't depend on another job.
+    if: github.triggering_actor == 'AntoineGautier'
     runs-on: ubuntu-latest
     permissions:
       contents: write

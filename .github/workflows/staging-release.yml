@@ -87,5 +87,6 @@ jobs:
             echo "- **Version**: ${{ steps.version.outputs.version }}"
             echo "- Build tested against the same tarball \`npm pack\` produces for publishing."
             echo "- To amend \`staging\` (e.g. changelog wording, a quick fix): push a commit directly to \`staging\`. Do not re-run this workflow, which recreates \`staging\` from \`main\` and would discard the amendment."
-            echo "- Once you're happy with \`staging\`, run **Main Release** to merge it into \`main\`, publish to npm, tag \`v${{ steps.version.outputs.version }}\`, and create the GitHub Release. It re-runs the same build/test/pack checks first, so a broken hand-edit fails safely without merging, publishing, or tagging anything."
+            echo "- Once you're happy with \`staging\`, run **Main Release** to tag \`v${{ steps.version.outputs.version }}\`, publish to npm, and create the GitHub Release. It re-runs the test suite first, and publishes only after the tag is pushed, so a broken hand-edit fails safely without publishing or tagging anything."
+            echo "- **Main Release does not update \`main\`.** Fast-forward it yourself afterwards: \`git fetch origin && git checkout main && git merge --ff-only origin/staging && git push origin main\`"
           } >> "$GITHUB_STEP_SUMMARY"

@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.1.2](https://github.com/AntoineGautier/prettier-plugin-modelica/compare/v0.1.1...v0.1.2) (2026-10-02)
+
+### Bug Fixes
+
+* indent annotation after extends statement ([#8](https://github.com/AntoineGautier/prettier-plugin-modelica/issues/8)) ([3ee7199](https://github.com/AntoineGautier/prettier-plugin-modelica/commit/3ee7199dd1923f683e58cf096b2da83414f1209d))
 ## [0.1.1](https://github.com/AntoineGautier/prettier-plugin-modelica/compare/v0.1.0...v0.1.1) (2026-09-11)
 
 ### Bug Fixes

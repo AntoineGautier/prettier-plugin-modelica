@@ -285,7 +285,7 @@ export function printExtendsClause(
     } else if (child.type === "class_modification") {
       parts.push(path.call(print, "children", i));
     } else if (child.type === "annotation_clause") {
-      parts.push(" ", path.call(print, "children", i));
+      parts.push(indent([hardline, path.call(print, "children", i)]));
     }
   }
   parts.push(";");

@@ -139,7 +139,9 @@ const INCLUDED_ANONYMOUS_TOKENS = new Set([
  * Convert a tree-sitter Node to our ASTNode interface
  *
  * Includes named children plus specific operator/keyword tokens needed by the printer.
- * Excludes punctuation like '.', ';', '[', ']', '(', ')' etc.
+ * Excludes punctuation like '.', ';', '[', ']', '(', ')' etc., except the
+ * leading '.' of global-scope names (field "global" on component_reference and
+ * type_specifier, Modelica Spec 3.6 section 5.3.3), which carries semantics.
  */
 function convertNode(node: TSNode, fieldName?: string): ASTNode {
   const children: ASTNode[] = [];
@@ -150,7 +152,11 @@ function convertNode(node: TSNode, fieldName?: string): ASTNode {
     if (child) {
       const childFieldName = node.fieldNameForChild(i) || undefined;
       // Include if named OR if it's a needed anonymous token
-      if (child.isNamed || INCLUDED_ANONYMOUS_TOKENS.has(child.type)) {
+      if (
+        child.isNamed ||
+        INCLUDED_ANONYMOUS_TOKENS.has(child.type) ||
+        childFieldName === "global"
+      ) {
         children.push(convertNode(child, childFieldName));
       }
     }

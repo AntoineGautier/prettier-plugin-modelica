@@ -5,7 +5,7 @@
 
 import type { AstPath, Doc } from "prettier";
 import type { ASTNode } from "../parser.js";
-import { endsWithDot, printChildren, type PrintFn } from "./utils.js";
+import { endsWithDot, type PrintFn } from "./utils.js";
 
 /**
  * Print name node
@@ -72,5 +72,17 @@ export function printTypeSpecifier(
   _options: object,
   print: PrintFn,
 ): Doc {
-  return printChildren(path, print);
+  const node = path.getValue();
+  const parts: Doc[] = [];
+
+  for (let i = 0; i < node.children.length; i++) {
+    const child = node.children[i];
+    if (child.fieldName === "global") {
+      // global lookup prefix (Modelica Spec 3.6 section 5.3.3)
+      parts.push(".");
+    } else {
+      parts.push(path.call(print, "children", i));
+    }
+  }
+  return parts;
 }

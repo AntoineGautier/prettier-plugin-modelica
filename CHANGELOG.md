@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.3](https://github.com/AntoineGautier/prettier-plugin-modelica/compare/v0.1.2...v0.1.3) (2026-11-16)
+
+### Bug Fixes
+
+* preserve leading dot in global-scope names ([#10](https://github.com/AntoineGautier/prettier-plugin-modelica/issues/10)) ([b189b4f](https://github.com/AntoineGautier/prettier-plugin-modelica/commit/b189b4faea420ca59554b617d7eb5d65e6c36e30))
+
 ## [0.1.2](https://github.com/AntoineGautier/prettier-plugin-modelica/compare/v0.1.1...v0.1.2) (2026-10-02)
 
 ### Bug Fixes
